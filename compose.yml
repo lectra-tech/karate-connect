@@ -1,10 +1,20 @@
 services:
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile_builder
+      tags:
+        - karate-connect:builder
   minimal:
     build:
       context: .
       dockerfile: Dockerfile_minimal
+      args:
+        - BUILDER_IMAGE=karate-connect:builder
       tags:
         - karate-connect:minimal
+    depends_on:
+      - builder
   nominal:
     build:
       context: .

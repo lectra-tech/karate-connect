@@ -56,9 +56,7 @@ jobs:
         if: ${{ contains(github.ref, 'refs/tags/') }}
         run: |
           TAG=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG#v}
           echo "TAG_NAME=$TAG" >> $GITHUB_ENV
-          echo "VERSION_NUMBER=$VERSION" >> $GITHUB_ENV
           echo "RELEASE_MODE=true" >> $GITHUB_ENV
 
       - name: Local registry if not in release mode
@@ -74,7 +72,19 @@ jobs:
           cosign-release: 'v2.4.2'
 
       # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
+      - name: Extract Docker metadata - builder
+        id: meta-builder
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
+        with:
+          images: localhost:5000/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{version}},suffix=-builder
+            type=ref,event=branch
+
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata - minimal
         id: meta-minimal
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
@@ -86,7 +96,7 @@ jobs:
             type=ref,event=branch
 
       # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
+      - name: Extract Docker metadata - nominal
         id: meta-nominal
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
@@ -98,7 +108,7 @@ jobs:
             type=ref,event=branch
 
       # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
+      - name: Extract Docker metadata - aks
         id: meta-aks
         uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
         with:
@@ -129,6 +139,36 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       # https://github.com/docker/build-push-action
+      - name: Build and push Docker image - builder
+        id: build-and-push-builder
+        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
+        with:
+          context: .
+          file: ./Dockerfile_builder
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-builder.outputs.tags }}
+          labels: ${{ steps.meta-builder.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Upload jar in release
+        if: ${{ env.RELEASE_MODE == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker container create --name temp-container ${{ steps.meta-builder.outputs.tags }}
+          docker container cp temp-container:/build/libs libs/
+          docker container rm temp-container
+          if gh release view "${{ env.TAG_NAME }}" > /dev/null 2>&1; then
+            echo "Release ${{ env.TAG_NAME }} already exists"
+          else
+            echo "Release ${{ env.TAG_NAME }} does not exist"
+            gh release create "${{ env.TAG_NAME }}" --title="${{ env.TAG_NAME }}" --generate-notes
+          fi
+          gh release upload "${{ env.TAG_NAME }}" libs/karate-connect-standalone-*.jar --clobber
+
+      # https://github.com/docker/build-push-action
       - name: Build and push Docker image - minimal
         id: build-and-push-minimal
         uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
@@ -139,6 +179,9 @@ jobs:
           push: true
           tags: ${{ steps.meta-minimal.outputs.tags }}
           labels: ${{ steps.meta-minimal.outputs.labels }}
+          build-args: |
+            BUILDER_IMAGE=${{ steps.meta-builder.outputs.tags }}
+            BUILDPLATFORM=linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -173,22 +216,6 @@ jobs:
             BASE_IMAGE=${{ steps.meta-minimal.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Upload jar in release
-        if: ${{ env.RELEASE_MODE == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          docker container create --name temp-container ${{ steps.meta-minimal.outputs.tags }}
-          docker container cp temp-container:/karate-connect-standalone.jar karate-connect-standalone-${{ env.VERSION_NUMBER }}.jar
-          docker container rm temp-container
-          if gh release view "${{ env.TAG_NAME }}" > /dev/null 2>&1; then
-            echo "Release ${{ env.TAG_NAME }} already exists"
-          else
-            echo "Release ${{ env.TAG_NAME }} does not exist"
-            gh release create "${{ env.TAG_NAME }}" --title="${{ env.TAG_NAME }}" --generate-notes
-          fi
-          gh release upload "${{ env.TAG_NAME }}" karate-connect-standalone-${{ env.VERSION_NUMBER }}.jar --clobber
 
       # https://github.com/sigstore/cosign
       - name: Sign the published Docker image - minimal
