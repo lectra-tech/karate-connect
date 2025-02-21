@@ -506,3 +506,17 @@ For the fat JAR usage, you have to install https://pypi.org/project/snowflake-cl
 * https://mrebiai.github.io/karate-snowflake[`karate-connect` public presentations^]
 * https://github.com/karatelabs/karate[^]
 * https://github.com/karatelabs/karate-examples[^]
+
+== Contributing
+link:CONTRIBUTING.adoc[]
+
+== Coding guidelines
+TODO
+
+== Code of Conduct
+TODO
+
+== Licensing
+The code is licensed under link:LICENSE[Apache License, Version 2.0^].
+
+The documentation and logo are licensed under link:cc-by-sa-4.0.LICENSE[Creative Commons Attribution-ShareAlike 4.0 International Public License^].

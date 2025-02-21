@@ -1,0 +1,72 @@
+= Contributing
+:toc:
+:sectnums:
+:icons: font
+:project: karate-connect
+
+== Introduction
+
+You can contribute to https://github.com/lectra-tech/{project}[{project}^] via
+https://help.github.com/articles/about-pull-requests/[pull requests^] filed.
+
+== Workflow for a contributor
+* Create a fork, named `{project}`, on your namespace : copy the `main` branch only
+* Enable Github actions on this new repository for local ci operations : https://github.com/<your-namespace>/{project}/actions[^]
+* Do your changes in the code!
+* If your modifications are on the `main` branch, build & tests are run
+* If you create a https://semver.org/[SemVer^] Github release, like `vX.Y.Z`, the build is launched again, completed with docker images publishing on `ghcr.io`
+
+.Get your new Docker image for more tests on your side
+[source,bash,subs="attributes,verbatim"]
+----
+docker pull ghcr.io/<your-namespace>/{project}:<X.Y.Z>
+----
+
+* Create a pull request on this repository and on its `main` branch : link:.github/workflows/docker-contrib.yml[] is launched : unit & integration tests
+* If a `{project}` maintainer accepts this pull request and make a new release `vA.B.C`, your code will be available in the future Docker image on docker.io (https://hub.docker.com/r/lectratech/{project}/tags[DockerHub^])
+
+.Get a `{project}` Docker image having version A.B.C
+[source,bash,subs="attributes,verbatim"]
+----
+docker pull lectratech/{project}:<A.B.C>
+----
+
+== Signing off each Commit
+
+As part of filing a pull request we ask you to sign off the
+https://developercertificate.org/[Developer Certificate of Origin^] (DCO) in each commit.
+Any Pull Request with commits that are not signed off will be reject by the
+https://probot.github.io/apps/dco/[DCO check^].
+
+A DCO is lightweight way for a contributor to confirm that they wrote or otherwise have the right
+to submit code or documentation to a project. Simply add `Signed-off-by` as shown in the example below
+to indicate that you agree with the DCO.
+
+Example for a commit message with a sign-off:
+
+[source]
+----
+    doc(readme.adoc): Align sample code
+
+    Signed-off-by: John Doe <john.doe@example.com>
+----
+
+Git has the `-s` option (lower case) for `commit` that can sign off a commit for you, see example below:
+
+[source,bash]
+----
+git commit -s -m 'doc(readme.adoc): Align sample code'
+----
+
+== Git History
+* https://www.robertcooper.me/git-commit-messages[Ensure that your commit messages will make your mom proud^]
+* https://github.com/oss-review-toolkit/.github/blob/main/CONTRIBUTING.md#git-history[See what is done on ORT^]
+
+
+== Coding Conventions
+TODO::
+* code organization
+* format
+
+
+Thank you for reading and happy contributing!
