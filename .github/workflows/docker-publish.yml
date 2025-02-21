@@ -1,0 +1,224 @@
+name: Docker Build & Publish
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+on:
+  push:
+    branches: [ "main" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+
+env:
+  ORIGIN_REPOSITORY: lectra-tech/karate-connect
+  # Dockerhub
+  REGISTRY: docker.io
+  REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  REGISTRY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/karate-connect
+  RELEASE_MODE: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
+    permissions:
+      contents: write
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect a forked repository
+        if: ${{ github.repository != env.ORIGIN_REPOSITORY }}
+        run: |
+          echo "REGISTRY=ghcr.io" >> "$GITHUB_ENV"
+          echo "REGISTRY_USERNAME=${{ github.actor }}" >> "$GITHUB_ENV"
+          echo "REGISTRY_PASSWORD=${{ secrets.GITHUB_TOKEN }}" >> "$GITHUB_ENV"
+          echo "IMAGE_NAME=${{ github.repository }}" >> "$GITHUB_ENV"
+
+      - name: Detect a release
+        if: ${{ contains(github.ref, 'refs/tags/') }}
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "TAG_NAME=$TAG" >> $GITHUB_ENV
+          echo "VERSION_NUMBER=$VERSION" >> $GITHUB_ENV
+          echo "RELEASE_MODE=true" >> $GITHUB_ENV
+
+      - name: Local registry if not in release mode
+        if: ${{ env.RELEASE_MODE != 'true' }}
+        run: |
+          echo "REGISTRY=localhost:5000" >> $GITHUB_ENV
+
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: ${{ env.RELEASE_MODE == 'true' && github.repository == env.ORIGIN_REPOSITORY }}
+        uses: sigstore/cosign-installer@c56c2d3e59e4281cc41dea2217323ba5694b171e # v3.8.0
+        with:
+          cosign-release: 'v2.4.2'
+
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta-minimal
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{version}},suffix=-minimal
+            type=ref,event=branch
+
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta-nominal
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        id: meta-aks
+        uses: docker/metadata-action@369eb591f429131d6889c46b94e711f089e6ca96 # v5.6.1
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{version}},suffix=-aks
+            type=ref,event=branch
+            
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
+        with:
+          driver-opts: network=host
+
+      # https://github.com/docker/login-action
+      - name: Log into registry ${{ env.REGISTRY }}
+        if: ${{ env.RELEASE_MODE == 'true' }}
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image - minimal
+        id: build-and-push-minimal
+        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
+        with:
+          context: .
+          file: ./Dockerfile_minimal
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-minimal.outputs.tags }}
+          labels: ${{ steps.meta-minimal.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image - nominal
+        id: build-and-push-nominal
+        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
+        with:
+          context: .
+          file: ./Dockerfile_nominal
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-nominal.outputs.tags }}
+          labels: ${{ steps.meta-nominal.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ steps.meta-minimal.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # https://github.com/docker/build-push-action
+      - name: Build and push Docker image - aks
+        id: build-and-push-aks
+        uses: docker/build-push-action@ca877d9245402d1537745e0e356eab47c3520991 # v6.13.0
+        with:
+          context: .
+          file: ./Dockerfile_aks
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-aks.outputs.tags }}
+          labels: ${{ steps.meta-aks.outputs.labels }}
+          build-args: |
+            BASE_IMAGE=${{ steps.meta-minimal.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Upload jar in release
+        if: ${{ env.RELEASE_MODE == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker container create --name temp-container ${{ steps.meta-minimal.outputs.tags }}
+          docker container cp temp-container:/karate-connect-standalone.jar karate-connect-standalone-${{ env.VERSION_NUMBER }}.jar
+          docker container rm temp-container
+          if gh release view "${{ env.TAG_NAME }}" > /dev/null 2>&1; then
+            echo "Release ${{ env.TAG_NAME }} already exists"
+          else
+            echo "Release ${{ env.TAG_NAME }} does not exist"
+            gh release create "${{ env.TAG_NAME }}" --title="${{ env.TAG_NAME }}" --generate-notes
+          fi
+          gh release upload "${{ env.TAG_NAME }}" karate-connect-standalone-${{ env.VERSION_NUMBER }}.jar --clobber
+
+      # https://github.com/sigstore/cosign
+      - name: Sign the published Docker image - minimal
+        if: ${{ env.RELEASE_MODE == 'true' && github.repository == env.ORIGIN_REPOSITORY }}
+        env:
+          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+          TAGS: ${{ steps.meta-minimal.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push-minimal.outputs.digest }}
+        # This step uses the identity token to provision an ephemeral certificate
+        # against the sigstore community Fulcio instance.
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
+      # https://github.com/sigstore/cosign
+      - name: Sign the published Docker image - nominal
+        if: ${{ env.RELEASE_MODE == 'true' && github.repository == env.ORIGIN_REPOSITORY }}
+        env:
+          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+          TAGS: ${{ steps.meta-nominal.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push-nominal.outputs.digest }}
+        # This step uses the identity token to provision an ephemeral certificate
+        # against the sigstore community Fulcio instance.
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
+      # https://github.com/sigstore/cosign
+      - name: Sign the published Docker image - aks
+        if: ${{ env.RELEASE_MODE == 'true' && github.repository == env.ORIGIN_REPOSITORY }}
+        env:
+          # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+          TAGS: ${{ steps.meta-aks.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push-aks.outputs.digest }}
+        # This step uses the identity token to provision an ephemeral certificate
+        # against the sigstore community Fulcio instance.
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
