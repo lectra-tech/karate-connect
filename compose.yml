@@ -1,0 +1,27 @@
+services:
+  minimal:
+    build:
+      context: .
+      dockerfile: Dockerfile_minimal
+      tags:
+        - karate-connect:minimal
+  nominal:
+    build:
+      context: .
+      dockerfile: Dockerfile_nominal
+      args:
+        - BASE_IMAGE=karate-connect:minimal
+      tags:
+        - karate-connect
+    depends_on:
+      - minimal
+  aks:
+    build:
+      context: .
+      dockerfile: Dockerfile_aks
+      args:
+        - BASE_IMAGE=karate-connect:minimal
+      tags:
+        - karate-connect:aks
+    depends_on:
+      - nominal

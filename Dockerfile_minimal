@@ -1,0 +1,23 @@
+FROM eclipse-temurin:21.0.6_7-jdk AS builder
+# Install python & pip
+RUN apt-get update  && apt-get -y install python3 python3-pip
+COPY pip.conf /root/.config/pip/pip.conf
+# Install python packages
+COPY requirements.txt /root/.config/pip/requirements.txt
+RUN pip install -r /root/.config/pip/requirements.txt
+# Run test & Build jar
+COPY .git .git
+COPY src src
+COPY *.gradle.kts ./
+COPY gradle.properties .
+COPY gradlew .
+COPY gradle gradle
+RUN ./gradlew build
+
+FROM eclipse-temurin:21.0.6_7-jre AS minimal
+COPY --from=builder /build/libs/karate-connect-standalone-*.jar /karate-connect-standalone.jar
+COPY --chmod=0775 entrypoint.sh .
+ENV KARATE_EXTENSIONS=""
+VOLUME /features
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["features"]

@@ -1,0 +1,6 @@
+.idea
+.gitignore
+.gradle
+build
+target
+*.jar

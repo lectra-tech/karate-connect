@@ -1,0 +1,22 @@
+[versions]
+kotlin = "1.9.25"
+karate = "1.5.1"
+amqp-client = "5.24.0"
+qpidbrokerj = "9.2.0"
+awaitility = "4.2.2"
+assertj = "3.27.3"
+grgit = "5.3.0"
+
+[libraries]
+karate-core = { module = "io.karatelabs:karate-core", version.ref = "karate" }
+karate-junit5 = { module = "io.karatelabs:karate-junit5", version.ref = "karate" }
+amqp-client = { module = "com.rabbitmq:amqp-client", version.ref = "amqp-client" }
+qpid-broker-core = { module = "org.apache.qpid:qpid-broker-core", version.ref = "qpidbrokerj" }
+qpid-broker-plugins-amqp = { module = "org.apache.qpid:qpid-broker-plugins-amqp-0-8-protocol", version.ref = "qpidbrokerj" }
+qpid-broker-plugins-memory-store = { module = "org.apache.qpid:qpid-broker-plugins-memory-store", version.ref = "qpidbrokerj" }
+awaitility-kotlin = { module = "org.awaitility:awaitility-kotlin", version.ref = "awaitility" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+grgit-service = { id = "org.ajoberstar.grgit.service", version.ref = "grgit" }

@@ -1,0 +1,8 @@
+{
+  "host": "localhost",
+  "port": #(parseInt(karate.properties['rabbitmq.port'])),
+  "virtualHost": "default",
+  "username": "guest",
+  "password": "guest",
+  "ssl": false
+}

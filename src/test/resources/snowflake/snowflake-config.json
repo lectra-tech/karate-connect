@@ -1,0 +1,6 @@
+{
+  "role": "#(karate.properties['snowflake.role'])",
+  "warehouse": "#(karate.properties['snowflake.warehouse'])",
+  "database": "#(karate.properties['snowflake.database'])",
+  "schema": "#(schema)"
+}

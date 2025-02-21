@@ -1,0 +1,22 @@
+ARG BASE_IMAGE="karate-connect:minimal"
+FROM ${BASE_IMAGE} AS nominal
+# Install python & pip
+RUN apt-get update && apt-get -y install python3 python3-pip
+COPY pip.conf /root/.config/pip/pip.conf
+# Install python packages
+COPY requirements.txt /root/.config/pip/requirements.txt
+RUN pip install -r /root/.config/pip/requirements.txt
+# Install azure-cli
+ARG AZ_VER=2.68.0
+ARG TARGETPLATFORM
+RUN apt-get update && apt-get -y install apt-transport-https ca-certificates curl gnupg lsb-release
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -ksLS https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /etc/apt/keyrings/microsoft.gpg
+RUN chmod go+r /etc/apt/keyrings/microsoft.gpg
+RUN ARCH=$(echo -n ${TARGETPLATFORM} | cut -d'/' -f2) && echo "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" | \
+    tee /etc/apt/sources.list.d/azure-cli.list
+RUN apt-get update && apt-get -y install azure-cli=${AZ_VER}-1~$(lsb_release -cs)
+# Install kubelogin & kubectl
+ARG KUBECTL_VERSION=1.32.1
+ARG KUBELOGIN_VERSION=0.1.7
+RUN az aks install-cli --client-version ${KUBECTL_VERSION} --kubelogin-version ${KUBELOGIN_VERSION}

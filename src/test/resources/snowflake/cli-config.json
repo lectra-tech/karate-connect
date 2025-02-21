@@ -1,0 +1,6 @@
+{
+  "account": "#(karate.properties['snowflake.account'])",
+  "user": "#(karate.properties['snowflake.user'])",
+  "privateKeyPath": "#(karate.properties['snowflake.privateKeyPath'])",
+  "privateKeyPassphrase": "#(karate.properties['snowflake.privateKeyPassphrase'])"
+}

@@ -1,0 +1,2 @@
+{ "FOO": 1, "BAR": "#(bar1)", "TEST": "#('prefix-' + test + '-suffix')", "DATE": "#(myDate.toString())" }
+{ "FOO": #(foo2), "BAR": "baz", "TEST": "#('prefix-' + test + '-suffix')", "DATE": "#(myDate.toString())" }

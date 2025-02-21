@@ -1,0 +1,508 @@
+= karate-connect
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+:source-language: gherkin, javascript
+
+== What is `karate-connect` ?
+
+It is a fat JAR with https://github.com/karatelabs/karate[Karate Core^] and extensions to connect to other systems:
+
+* `karate-connect-standalone-<version>.jar`
+
+The extensions require some tools. Three Docker images are also available with everything installed :
+
+* `lectratech/karate-connect:<version>-minimal` (only the standalone JAR in a JRE image)
+* `lectratech/karate-connect:<version>` (Python packages & standard kubectl installation)
+* `lectratech/karate-connect:<version>-aks` (Python packages & Azure Kubernetes Service kubectl installation)
+
+
+== What is an extension ?
+
+A set of Kotlin classes, Karate features, Javascript functions.
+This set is callable in your Karate project.
+
+.How to call a function from an extension ?
+[source,gherkin]
+----
+* def result1 = <extension>.<value>
+* def result2 = <extension>.<feature>.<function>(args)
+----
+
+.Examples
+[source,gherkin]
+----
+* json cliConfig     = snowflake.cliConfigFromEnv
+* def rabbitmqClient = rabbitmq.topology.createClient({"host": "...", "port": ..., ...})
+----
+
+== How to build `karate-connect` ?
+Requirements::
+* Kotlin 1.x
+* Gradle 8.x
+* Docker
+* Python 3.x & pip
+
+Snowflake requirements::
+* Define a `src/test/resources/snowflake/snowflake.properties` with your Snowflake information
+** Example: `src/test/resources/snowflake/snowflake.template.properties`
+** Note: `privateKeyBase64` is a base64 one-line encoded private key : `cat my-private-key.pem | base64 -w0`
+* Your Snowflake role has to be allowed to create/drop schemas/stages/tables, create/execute/drop tasks.
+
+Commands::
+* `source .envrc` to install Python packages in a virtual environment (or `direnv allow` if you prefer the great https://direnv.net/[`direnv`^] tool)
+* `./gradlew build` to build the fat JAR with all tests
+* `./gradlew build -DtestExtensions=...` to build the fat JAR with only Karate tests on the given extensions (useful if you do not have a Snowflake account)
+* `docker compose build` to build the 3 Docker images locally :
+** `karate-connect:minimal`
+** `karate-connect`
+** `karate-connect:aks`
+
+== How to run `karate-connect` on your features
+
+=== Docker usage
+
+[source,bash]
+.To run all features in <feature_path> having maybe some extensions & reports generated in <report_path>
+----
+docker run --rm \
+    -v <features_path>:/features \
+    -v <reports_path>:/target/karate-reports \
+    -e KARATE_EXTENSIONS=<ext1>,<ext2>... \
+    lectratech/karate-connect:<version> <karate_args>
+----
+
+NOTE: `KARATE_EXTENSIONS`, `reports_path`, `karate_args` are optional
+
+.With a specific karate-config.js
+[source,bash]
+----
+docker run --rm \
+    ... \
+    -v <my-specific-karate-config.js>:/karate-config.js \
+    lectratech/karate-connect:<version> <karate_args>
+----
+
+.Example of `karate-config.js`
+[source,javascript]
+----
+function fn() {
+    const myFunction = (input) => input.toUpperCase();
+    return {
+        myValue: "foo",
+        myFunction: myFunction
+    };
+}
+----
+
+=== Java usage
+
+[source,bash]
+----
+java -jar karate-connect-standalone-<version>.jar -Dextensions=<ext1>,<ext2>... <karate_args>
+----
+
+== Extensions
+
+=== `base`
+
+Some common functions added to the Karate DSL
+
+==== Functions
+
+[source,gherkin]
+----
+* string res = base.random.uuid()                             # ex: '8cd07583-cf24-4373-ad58-f1c9303501c5'
+* def millis = base.time.currentTimeMillis()                  # ex: 1738851217499
+* string now = base.time.offsetDateTimeNow()                  # ex: '2025-01-01T15:10:00.629772630+01:00'
+* string str = base.json.toString({foo:"bar"})                # str='{"foo":"bar"}'
+* string str = base.json.readLines("file.json")               # str='{"id":"1c4b..."}\n{"id":"2a02..."}' with file.json = '{"id":"#(base.random.uuid())"}\n{"id":"#(base.random.uuid())"}'
+* def bool   = base.assert.withEpsilon(0.1234, 0.12, epsilon) # bool=true if epsilon=1E-2, false if epsilon=1E-3
+----
+
+NOTE: This extension is loaded by default.
+
+==== More info
+
+* link:src/main/resources/karate-base.js[Configuration^]
+* link:src/test/resources/base.test.feature[Tests^]
+
+=== `rabbitmq`
+
+Rabbitmq topology creations & message publications/consumptions
+
+==== Config
+
+.Rabbitmq client config
+[source,gherkin]
+----
+* json rabbitmqConfigFromEnv = rabbitmq.configFromEnv # environment variable RABBITMQ_HOST, RABBITMQ_PORT, RABBITMQ_VIRTUAL_HOST, RABBITMQ_USERNAME, RABBITMQ_PASSWORD, RABBITMQ_SSL
+* json rabbitmqConfigFromValue = { host: "localhost", port:5672, virtualHost:"default", username:"guest", password:"guest", ssl:false }
+* json rabbitmqConfigFromJsonFile = read("my-rabbitmq-config.json")
+----
+
+.Rabbitmq client
+[source,gherkin]
+----
+* def rabbitmqClient = rabbitmq.topology.createClient(rabbitmqConfig)
+----
+
+NOTE: It will be closed automatically when no longer in use.
+
+TIP: It should be created only once!
+Declare it in your `karate-config.js`
+
+.`karate-config.js` with your `rabbitmqClient`
+[source,javascript]
+----
+function fn() {
+  const rabbitmqConfig = ...;
+  const rabbitmqClient = karate.callSingle("classpath:rabbitmq/topology.feature@createClient", rabbitmqConfig).result;
+  return {
+    "rabbitmqClient": rabbitmqClient
+  };
+}
+----
+
+==== Topology
+
+These operations should not normally be performed by Karate.
+Nevertheless, it is possible if you need.
+
+.Exchange creation
+[source,gherkin]
+----
+* json exchangeConfig = ({ rabbitmqClient, name: "<myexchange>", type: "direct|topic|fanout|headers", durable: true(default)|false, autoDelete: true|false(default) })
+* json result = rabbitmq.topology.exchange(exchangeConfig)
+* match result.status == "OK"
+----
+
+.Queue creation
+[source,gherkin]
+----
+* json queueConfig = ({ rabbitmqClient, name: "<myqueue>", type: "classic|quorum|stream", durable: true(default)|false, exclusive: true|false(default), autoDelete: true|false(default) })
+* json result = rabbitmq.topology.queue(queueConfig)
+* match result.status == "OK"
+----
+
+.Binding creation (between an exchange and a queue)
+[source,gherkin]
+----
+* json bindingConfig = ({ rabbitmqClient, exchangeName: "<myexchange>", queueName: "<myqueue>", routingKey: "<my.routing.key>" })
+* json result = rabbitmq.topology.bind(bindingConfig)
+* match result.status == "OK"
+----
+
+==== Message
+
+.Message publication
+[source,gherkin]
+----
+* json publishConfig = ({ rabbitmqClient, exchangeName: "<myexchange>", routingKey: "<my.routing.key>" })
+* json headers = { header1: "foo", header2: "bar", ... }
+* json properties = ({ headers, contentType: "application/json", ... })
+* json message = ({ body: "...", properties })
+* json result = rabbitmq.message.publish({...publishConfig, message})
+* match result.status == "OK"
+----
+
+.Available properties
+[options=header,autowidth]
+|===
+|name|type|default value
+|`contentType`|string|"application/json"
+|`contentEncoding`|string|"UTF-8"
+|`deliveryMode`|number|null
+|`priority`|number|null
+|`correlationId`|string|"<uuid>"
+|`replyTo`|string|null
+|`expiration`|string|null
+|`messageId`|string|"<uuid>"
+|`timestamp`|number|nb milliseconds since January 1, 1970, 00:00:00 GMT, until now
+|`type`|string|null
+|`userId`|string|null
+|`appId`|string|null
+|`clusterId`|string|null
+|`headers`|map<string,string>|empty map
+|===
+
+.Message consumption
+[source,gherkin]
+----
+* json consumeConfig = ({ rabbitmqClient, queueName: "<myqueue>", timeoutSeconds: <nbSeconds>(default 60), minNbMessages: <nbNeededMessages>(default 1) })
+* json result = rabbitmq.message.consume(consumeConfig)
+* match result.status == "OK"
+----
+
+[NOTE]
+====
+* The consumption is waiting for `minNbMessages` messages during `timeoutSeconds` seconds.
+* If the number of messages is not reached during `timeoutSeconds` seconds, the consumption fails.
+* Set `minNbMessages` to `0` for no failure if no message is received during `timeoutSeconds` seconds.
+====
+
+.Message publication & consumption (RPC: Remote Procedure Call)
+[source,gherkin]
+----
+* json publishAndConsumeConfig = ({ rabbitmqClient, exchangeName: "<myexchange>", routingKey: "<my.routing.key>", timeoutSeconds: <nbSeconds>(default 60) })
+* json message = ... # input
+* json result = rabbitmq.message.publishAndConsume({...publishAndConsumeConfig, message})
+* match result.status == "OK"
+* match result.data.body == ... # output body
+* match result.data.properties == ... # output properties
+----
+
+[NOTE]
+====
+* If `message.properties.replyTo` is set, this queue name must exist and the client will wait for `1` message in this queue for the response, during `timeoutSeconds` seconds.
+* If `message.properties.replyTo` is not set, a temporary reply-to queue will created and used for the response.
+====
+
+==== More info
+
+* link:src/main/resources/rabbitmq/karate-ext-config.js[Configuration^]
+* link:src/test/resources/rabbitmq/rabbitmq.test.feature[Tests^]
+
+=== `snowflake`
+
+Snowflake CLI / Snowflake REST API calls
+
+[NOTE]
+====
+For the fat JAR usage, you have to install https://pypi.org/project/snowflake-cli/[`snowflake-cli`^] Python package
+====
+
+==== Config
+.CLI config
+[source,gherkin]
+----
+* json cliConfigFromEnv = snowflake.cliConfigFromEnv # environment variable SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY_PATH, PRIVATE_KEY_PASSPHRASE
+* json cliConfigFromValue = { account: "xxx.yyy.azure", user: "<MY_USER>", privateKeyPath: "<.../file.pem>", privateKeyPassphrase: "..." }
+* json cliConfigFromJsonFile = read("my-cli-config.json")
+----
+
+.Snowflake config
+[source,gherkin]
+----
+* json snowflakeConfigConfigFromEnv = snowflake.snowflakeConfigFromEnv # environment variable SNOWFLAKE_ROLE, SNOWFLAKE_WAREHOUSE, SNOWFLAKE_DATABASE, SNOWFLAKE_SCHEMA
+* json snowflakeConfigConfigFromValue = { role: "<MY_ROLE>", warehouse: "<MY_WH>", database: "<MY_DB>", schema: "<MY_SCHEMA>" }
+* json snowflakeConfigFromJsonFile = read("my-snowflake-config.json")
+----
+
+==== CLI
+.JWT generation
+[source, gherkin]
+----
+* string jwt = snowflake.cli.generateJwt(cliConfig)
+* match jwt === '#regex .+\\..+\\..+'
+----
+
+TIP: The JWT should be created once (on once per scenario). Declare it in your `karate-config.js`
+
+.`karate-config.js` with your `rabbitmqClient`
+[source,javascript]
+----
+function fn() {
+  const cliConfig = ...;
+  const jwt = karate.callSingle("classpath:snowflake/cli.feature@generateJwt", cliConfig).result; // once
+  // const jwt = karate.call("classpath:snowflake/cli.feature@generateJwt", cliConfig).result; // once per scenario
+  return {
+    "jwt": jwt,
+    "cliConfig": cliConfig,
+    ...
+  };
+}
+----
+
+
+.CSV file import
+[source, gherkin]
+----
+* string fileAbsolutePath = karate.toAbsolutePath("<relativePath>/<file>.csv")
+* string tableName = "<MY_TABLE>"
+* json result = snowflake.cli.putCsvIntoTable({ fileAbsolutePath, tableName, cliConfig, snowflakeConfig })
+* match result.status == "OK"
+----
+
+.JSON file import
+[source, gherkin]
+----
+* string fileAbsolutePath = karate.toAbsolutePath("<relativePath>/<file>.json")
+* string tableName = "<MY_TABLE>"
+* json result = snowflake.cli.putJsonIntoTable({ fileAbsolutePath, tableName, cliConfig, snowflakeConfig })
+* match result.status == "OK"
+----
+
+.SQL statement execution (directly with the CLI)
+[source, gherkin]
+----
+* string statement = "SELECT FOO, BAR FROM..."
+* json result = snowflake.cli.runSql({ statement, cliConfig, snowflakeConfig })
+* match result.status == "OK"
+* match result.output == [ { "FOO": 1, "BAR": "bar1" }, { "FOO": 2, "BAR": "bar2" }, ... ]
+----
+
+NOTE: Limitations for SQL statement through CLI is not yet analyzed.
+
+==== REST API
+.SQL statement execution
+[source, gherkin]
+----
+* json restConfig = ({ jwt, cliConfig, snowflakeConfig })
+* string statement = "SELECT FOO, BAR FROM..."
+* json result = snowflake.rest.runSql({ ...restConfig, statement})
+* match result.status == "OK"
+* match (result.data.length) == 1
+* match result.data[0].FOO == 1
+* match result.data[0].BAR == "bar1"
+----
+
+[NOTE]
+====
+* Limitations for SQL statement is not yet fully analyzed.
+* Default HTTP retry strategy:  `karate.configure("retry", {count: 10, interval: 5000})`
+* Default `readTimeout`: `karate.configure("readTimeout", 240000);`
+* If HTTP 202 is returned (long SQL statement), a GET request loop (with a `statementHandle`) will wait for a HTTP 200, according to the HTTP retry strategy.
+* Pagination: TODO
+====
+
+.Schema cloning
+[source, gherkin]
+----
+* json restConfig = ({ jwt, cliConfig, snowflakeConfig })
+* json result = snowflake.rest.cloneSchema({...restConfig, schemaToClone: "<MY_SOURCE_SCHEMA>", schemaToCreate: "<MY_TARGET_SCHEMA>"})
+* match result.status == "OK"
+----
+
+.Schema dropping
+[source, gherkin]
+----
+* json restConfig = ({ jwt, cliConfig, snowflakeConfig })
+* json result = snowflake.rest.dropSchema({...restConfig, schemaToDrop: "<MY_SCHEMA>"})
+* match result.status == "OK"
+----
+
+.Staging table (RECORD_METADATA JSON_VARIANT, RECORD_VALUE JSON_VARIANT) insertion - Useful for a `Kafka Connect` usage
+[source, gherkin]
+----
+* string table = "<MY_TABLE>"
+# Single row
+* json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadata: {...}, recordValue: {...}})
+* match result.status == "OK"
+# Single row from files
+* json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadataFile: "<file-metadata-path>", recordValue: "<file-value-path>"})
+* match result.status == "OK"
+# Many rows
+* json result = snowflake.rest.insertRowsIntoStagingTable({...restConfigLocal, table, records: [ {recordMetadata: {...}, recordValue: {...}}, ... ]})
+* match result.status == "OK"
+----
+
+.Task status checking
+[source, gherkin]
+----
+* string taskName = "<MY_TASK>"
+* json restConfig = ({ jwt, cliConfig, snowflakeConfig })
+* json result = snowflake.rest.runSql({...restConfig, statement: "EXECUTE TASK "+taskName})
+* match result.status == "OK"
+* json result = snowflake.rest.checkTaskStatus({...restConfig, taskName})
+* match result.status == "OK"
+----
+
+NOTE: `checkTaskStatus` will use the retry strategy to wait for the task completion.
+
+.Task cloning and execution - Useful to ignore the parent task and test only the task code
+[source, gherkin]
+----
+* string taskName = "<MY_TASK>"
+* json restConfig = ({ jwt, cliConfig, snowflakeConfig })
+* json result = snowflake.rest.cloneAndExecuteTask({...restConfig, taskName})
+* match result.status == "OK"
+----
+
+NOTE: `cloneAndExecuteTask` will execute a temporary copy of the task `taskName` (without the parent task) and will wait for its completion.
+
+==== More info
+* link:src/main/resources/snowflake/karate-ext-config.js[Configuration^]
+* link:src/test/resources/snowflake[Tests^]
+
+=== `kubernetes`
+
+Kubectl calls
+
+[NOTE]
+====
+* For the fat JAR usage
+** you have to install https://kubernetes.io/docs/tasks/tools/#kubectl[`kubectl`^] tool
+* For the Docker image usage
+** you have to mount your `.kube` directory in `/root/.kube` to use your Kubernetes configuration.
+====
+
+
+==== CronJob
+
+.Job creation from a CronJob
+[source, gherkin]
+----
+* string namespace = "<my-namespace>"
+* string cronJobName = "<my-cronjob-name>"
+* string jobName = "<my-created-job-name>"
+* def timeoutSeconds = 60 # (default)
+* json result = kubernetes.cronJob.runJob({namespace, cronJobName, jobName, timeoutSeconds})
+* match result.status == "OK"
+* karate.log(result.message)
+----
+
+.Job creation from a CronJob with given environment variables
+[source, gherkin]
+----
+* string namespace = "<my-namespace>"
+* string cronJobName = "<my-cronjob-name>"
+* string jobName = "<my-created-job-name>"
+* def timeoutSeconds = 60 # (default)
+* json env = { "MY_ENV1": "MY_VALUE1", "MY_ENV2": "MY_VALUE2" }
+* json result = kubernetes.cronJob.runJobWithEnv({namespace, cronJobName, jobName, timeoutSeconds, env})
+* match result.status == "OK"
+* karate.log(result.message)
+----
+
+==== More info
+* link:src/main/resources/kubernetes/karate-ext-config.js[Configuration^]
+* TODO tests
+
+=== `dbt`
+
+Dbt calls
+
+[NOTE]
+====
+For the fat JAR usage, you have to install https://pypi.org/project/snowflake-cli/[`dbt-snowflake`^] Python package
+====
+
+==== CLI
+.DBT execution
+[source, gherkin]
+----
+# nominal case
+* json result = dbt.cli.run()
+* match result.status == "OK"
+* karate.log(result.output)
+# with optional parameters
+* string select = "my_model"
+* string profilesDir = "/path/to/.dbt"
+* string projectDir = "/path/to/dbtProject"
+* string extra = "..."
+* json result = dbt.cli.run({select, profilesDir, projectDir, extra})
+* match result.status == "OK"
+* karate.log(result.output)
+----
+
+==== More info
+* link:src/main/resources/dbt/karate-ext-config.js[Configuration^]
+* TODO tests
+
+== Links
+* https://mrebiai.github.io/karate-snowflake[`karate-connect` public presentations^]
+* https://github.com/karatelabs/karate[^]
+* https://github.com/karatelabs/karate-examples[^]
