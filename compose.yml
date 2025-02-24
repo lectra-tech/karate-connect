@@ -15,23 +15,33 @@ services:
         - karate-connect:minimal
     depends_on:
       - builder
+  python:
+    build:
+      context: .
+      dockerfile: Dockerfile_python
+      args:
+        - BASE_IMAGE=karate-connect:minimal
+      tags:
+        - karate-connect:python
+    depends_on:
+      - minimal
   nominal:
     build:
       context: .
       dockerfile: Dockerfile_nominal
       args:
-        - BASE_IMAGE=karate-connect:minimal
+        - BASE_IMAGE=karate-connect:python
       tags:
         - karate-connect
     depends_on:
-      - minimal
+      - python
   aks:
     build:
       context: .
       dockerfile: Dockerfile_aks
       args:
-        - BASE_IMAGE=karate-connect:minimal
+        - BASE_IMAGE=karate-connect:python
       tags:
         - karate-connect:aks
     depends_on:
-      - nominal
+      - python
