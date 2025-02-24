@@ -40,9 +40,10 @@ This set is callable in your Karate project.
 
 == How to build `karate-connect` ?
 Requirements::
-* Kotlin 1.x
-* Gradle 8.x
-* Docker
+* JDK 21+
+* Kotlin
+* Gradle
+* Docker and Docker Compose
 * Python 3.x & pip
 
 Snowflake requirements::
@@ -101,7 +102,7 @@ function fn() {
 
 [source,bash]
 ----
-java -jar karate-connect-standalone-<version>.jar -Dextensions=<ext1>,<ext2>... <karate_args>
+java -Dextensions=<ext1>,<ext2>... -jar karate-connect-standalone-<version>.jar <karate_args>
 ----
 
 == Extensions

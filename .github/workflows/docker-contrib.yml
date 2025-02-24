@@ -27,6 +27,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Launch Kafka environment
+      - name: Docker build all images
         run: |
           docker compose build
