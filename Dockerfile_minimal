@@ -2,7 +2,7 @@ ARG BUILDER_IMAGE="karate-connect:builder"
 FROM --platform=${BUILDPLATFORM} ${BUILDER_IMAGE} AS builder
 
 FROM eclipse-temurin:21.0.6_7-jre AS minimal
-COPY --from=builder /build/libs/karate-connect-standalone-*.jar /karate-connect-standalone.jar
+COPY --from=builder /build/libs/karate-connect-*-standalone.jar /karate-connect-standalone.jar
 COPY --chmod=0775 entrypoint.sh .
 ENV KARATE_EXTENSIONS=""
 VOLUME /features
