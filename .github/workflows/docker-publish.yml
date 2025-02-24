@@ -182,7 +182,7 @@ jobs:
             echo "Release ${{ env.TAG_NAME }} does not exist"
             gh release create "${{ env.TAG_NAME }}" --title="${{ env.TAG_NAME }}" --generate-notes
           fi
-          gh release upload "${{ env.TAG_NAME }}" libs/karate-connect-standalone-*.jar --clobber
+          gh release upload "${{ env.TAG_NAME }}" libs/karate-connect-*-standalone.jar --clobber
 
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image - minimal

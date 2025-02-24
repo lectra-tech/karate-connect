@@ -8,9 +8,9 @@
 
 == What is `karate-connect` ?
 
-It is a fat JAR with https://github.com/karatelabs/karate[Karate Core^] and extensions to connect to other systems:
+It is a fat JAR (available https://github.com/lectra-tech/karate-connect/releases[here^]) with https://github.com/karatelabs/karate[Karate Core^] and extensions to connect to other systems :
 
-* `karate-connect-standalone-<version>.jar`
+* `karate-connect-<version>-standalone.jar`
 
 The extensions require some tools. Three Docker images are also available with everything installed :
 
@@ -102,7 +102,7 @@ function fn() {
 
 [source,bash]
 ----
-java -Dextensions=<ext1>,<ext2>... -jar karate-connect-standalone-<version>.jar <karate_args>
+java -Dextensions=<ext1>,<ext2>... -jar karate-connect-<version>-standalone.jar <karate_args>
 ----
 
 == Extensions
