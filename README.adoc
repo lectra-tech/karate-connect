@@ -235,6 +235,9 @@ Nevertheless, it is possible if you need.
 * json consumeConfig = ({ rabbitmqClient, queueName: "<myqueue>", timeoutSeconds: <nbSeconds>(default 60), minNbMessages: <nbNeededMessages>(default 1) })
 * json result = rabbitmq.message.consume(consumeConfig)
 * match result.status == "OK"
+* match result.data[0].properties == ... # output properties
+* match result.data[0].body == ... # output string body
+* json bodyAsJson = result.data[0].body # cast to JSON
 ----
 
 [NOTE]
@@ -251,8 +254,8 @@ Nevertheless, it is possible if you need.
 * json message = ... # input
 * json result = rabbitmq.message.publishAndConsume({...publishAndConsumeConfig, message})
 * match result.status == "OK"
-* match result.data.body == ... # output body
 * match result.data.properties == ... # output properties
+* match result.data.body == ... # output string body
 ----
 
 [NOTE]
