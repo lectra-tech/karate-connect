@@ -133,7 +133,7 @@ class RabbitmqClient(
     }
 
     fun bind(exchangeName: String, queueName: String, bindingKey: String) {
-        logExecution("Binging exchange $exchangeName --$bindingKey--> queue $queueName") {
+        logExecution("Binding exchange $exchangeName --$bindingKey--> queue $queueName") {
             handleChannel(controlChannel).queueBind(queueName, exchangeName, bindingKey)
         }
     }
