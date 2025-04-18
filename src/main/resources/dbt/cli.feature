@@ -21,11 +21,13 @@ Feature: cli
 
   @run
   Scenario: run
-  args = { select: "...", profilesDir: "...", projectDir: "...", extra: "..."  }
-    * string selectValue = (karate.get("select") != null ? "--select "+select" : "")
-    * string profilesDirValue = (karate.get("profilesDir") != null ? "--profiles-dir "+profilesDir : "")
-    * string projectDirValue = (karate.get("projectDir") != null ? "--project-dir "+projectDir : "")
+  args = { select: "...", profilesDir: "...", projectDir: "...", extra: "...", env: { "X": "valueX", "Y": "valueY", ...}} }
+    * string selectValue = (karate.get("select") != null ? "--select " + select : "")
+    * string profilesDirValue = (karate.get("profilesDir") != null ? "--profiles-dir " + profilesDir : "")
+    * string projectDirValue = (karate.get("projectDir") != null ? "--project-dir " + projectDir : "")
     * string extraValue = karate.get("extra", "")
     * json result = { status : "WIP" }
-    * result.output = karate.exec("dbt run "+selectValue+" "+profilesDirValue+" "+projectDirValue+" "+extraValue)
+    * string dbtCommand = "dbt run "+selectValue+" "+profilesDirValue+" "+projectDirValue+" "+extraValue
+    * string execCommand = (karate.get("env") != null ? "bash -c '"+Object.keys(env).map((k) => k + "=" + env[k]).join(" ")+" "+dbtCommand+"'" : dbtCommand) 
+    * result.output = karate.exec(execCommand)
     * result.status = (result.output.contains("Completed successfully") ? "OK" : "FAILED")
