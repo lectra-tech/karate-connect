@@ -489,22 +489,23 @@ For the fat JAR usage, you have to install https://pypi.org/project/snowflake-cl
 [source, gherkin]
 ----
 # nominal case
-* json result = dbt.cli.run()
+* json result = dbt.cli.run({})
 * match result.status == "OK"
 * karate.log(result.output)
 # with optional parameters
+* string env = { "X": "valueX", "Y": "valueY" }
 * string select = "my_model"
 * string profilesDir = "/path/to/.dbt"
 * string projectDir = "/path/to/dbtProject"
 * string extra = "..."
-* json result = dbt.cli.run({select, profilesDir, projectDir, extra})
+* json result = dbt.cli.run({env, select, profilesDir, projectDir, extra})
 * match result.status == "OK"
 * karate.log(result.output)
 ----
 
 ==== More info
 * link:src/main/resources/dbt/karate-ext-config.js[Configuration^]
-* TODO tests
+* https://github.com/mrebiai/karate-snowflake/tree/main/burger_factory/it/features[Tests^]
 
 == Links
 * https://mrebiai.github.io/karate-snowflake[`karate-connect` public presentations^]
