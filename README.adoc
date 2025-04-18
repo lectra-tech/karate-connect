@@ -35,7 +35,7 @@ This set is callable in your Karate project.
 [source,gherkin]
 ----
 * json cliConfig     = snowflake.cliConfigFromEnv
-* def rabbitmqClient = rabbitmq.topology.createClient({"host": "...", "port": ..., ...})
+* def rabbitmqClient = rabbitmq.topology.createClient({ host: "localhost", port: 5672 })
 ----
 
 == How to build `karate-connect` ?
@@ -202,9 +202,9 @@ Nevertheless, it is possible if you need.
 [source,gherkin]
 ----
 * json publishConfig = ({ rabbitmqClient, exchangeName: "<myexchange>", routingKey: "<my.routing.key>" })
-* json headers = { header1: "foo", header2: "bar", ... }
-* json properties = ({ headers, contentType: "application/json", ... })
-* json message = ({ body: "...", properties })
+* json headers = { header1: "foo", header2: "bar" }
+* json properties = ({ headers, contentType: "text/plain" })
+* json message = ({ body: "hello world", properties })
 * json result = rabbitmq.message.publish({...publishConfig, message})
 * match result.status == "OK"
 ----
@@ -235,8 +235,8 @@ Nevertheless, it is possible if you need.
 * json consumeConfig = ({ rabbitmqClient, queueName: "<myqueue>", timeoutSeconds: <nbSeconds>(default 60), minNbMessages: <nbNeededMessages>(default 1) })
 * json result = rabbitmq.message.consume(consumeConfig)
 * match result.status == "OK"
-* match result.data[0].properties == ... # output properties
-* match result.data[0].body == ... # output string body
+* match result.data[0].properties.contentType == "text/plain"
+* match result.data[0].body == "hello world"
 * json bodyAsJson = result.data[0].body # cast to JSON
 ----
 
@@ -251,11 +251,11 @@ Nevertheless, it is possible if you need.
 [source,gherkin]
 ----
 * json publishAndConsumeConfig = ({ rabbitmqClient, exchangeName: "<myexchange>", routingKey: "<my.routing.key>", timeoutSeconds: <nbSeconds>(default 60) })
-* json message = ... # input
+* json message = ({ body: "ping", properties: { contentType: "text/plain" } })
 * json result = rabbitmq.message.publishAndConsume({...publishAndConsumeConfig, message})
 * match result.status == "OK"
-* match result.data.properties == ... # output properties
-* match result.data.body == ... # output string body
+* match result.data.properties.contentType == "text/plain" 
+* match result.data.body == "pong"
 ----
 
 [NOTE]
@@ -283,7 +283,7 @@ For the fat JAR usage, you have to install https://pypi.org/project/snowflake-cl
 [source,gherkin]
 ----
 * json cliConfigFromEnv = snowflake.cliConfigFromEnv # environment variable SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY_PATH, PRIVATE_KEY_PASSPHRASE
-* json cliConfigFromValue = { account: "xxx.yyy.azure", user: "<MY_USER>", privateKeyPath: "<.../file.pem>", privateKeyPassphrase: "..." }
+* json cliConfigFromValue = { account: "xxx.yyy.azure", user: "<MY_USER>", privateKeyPath: "<path/file.pem>", privateKeyPassphrase: "****" }
 * json cliConfigFromJsonFile = read("my-cli-config.json")
 ----
 
@@ -342,10 +342,10 @@ function fn() {
 .SQL statement execution (directly with the CLI)
 [source, gherkin]
 ----
-* string statement = "SELECT FOO, BAR FROM..."
+* string statement = "SELECT FOO, BAR FROM MY_TABLE"
 * json result = snowflake.cli.runSql({ statement, cliConfig, snowflakeConfig })
 * match result.status == "OK"
-* match result.output == [ { "FOO": 1, "BAR": "bar1" }, { "FOO": 2, "BAR": "bar2" }, ... ]
+* match result.output == [ { "FOO": 1, "BAR": "bar1" }, { "FOO": 2, "BAR": "bar2" } ]
 ----
 
 NOTE: Limitations for SQL statement through CLI is not yet analyzed.
@@ -355,7 +355,7 @@ NOTE: Limitations for SQL statement through CLI is not yet analyzed.
 [source, gherkin]
 ----
 * json restConfig = ({ jwt, cliConfig, snowflakeConfig })
-* string statement = "SELECT FOO, BAR FROM..."
+* string statement = "SELECT FOO, BAR FROM MY_TABLE"
 * json result = snowflake.rest.runSql({ ...restConfig, statement})
 * match result.status == "OK"
 * match (result.data.length) == 1
