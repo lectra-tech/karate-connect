@@ -71,7 +71,7 @@ jobs:
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
         if: ${{ env.RELEASE_MODE == 'true' && github.repository == env.ORIGIN_REPOSITORY }}
-        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
+        uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
         with:
           cosign-release: 'v2.4.2'
 
@@ -157,7 +157,7 @@ jobs:
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image - builder
         id: build-and-push-builder
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
         with:
           context: .
           file: ./Dockerfile_builder
@@ -187,7 +187,7 @@ jobs:
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image - minimal
         id: build-and-push-minimal
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
         with:
           context: .
           file: ./Dockerfile_minimal
@@ -204,7 +204,7 @@ jobs:
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image - python
         id: build-and-push-python
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
         with:
           context: .
           file: ./Dockerfile_python
@@ -220,7 +220,7 @@ jobs:
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image - nominal
         id: build-and-push-nominal
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
         with:
           context: .
           file: ./Dockerfile_nominal
@@ -236,7 +236,7 @@ jobs:
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image - aks
         id: build-and-push-aks
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
         with:
           context: .
           file: ./Dockerfile_aks
