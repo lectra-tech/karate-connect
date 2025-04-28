@@ -493,7 +493,7 @@ For the fat JAR usage, you have to install https://pypi.org/project/snowflake-cl
 * match result.status == "OK"
 * karate.log(result.output)
 # with optional parameters
-* string env = { "X": "valueX", "Y": "valueY" }
+* json env = { "X": "valueX", "Y": "valueY" }
 * string select = "my_model"
 * string profilesDir = "/path/to/.dbt"
 * string projectDir = "/path/to/dbtProject"
