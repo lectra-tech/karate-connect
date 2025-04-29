@@ -320,25 +320,6 @@ function fn() {
 }
 ----
 
-
-.CSV file import
-[source, gherkin]
-----
-* string fileAbsolutePath = karate.toAbsolutePath("<relativePath>/<file>.csv")
-* string tableName = "<MY_TABLE>"
-* json result = snowflake.cli.putCsvIntoTable({ fileAbsolutePath, tableName, cliConfig, snowflakeConfig })
-* match result.status == "OK"
-----
-
-.JSON file import
-[source, gherkin]
-----
-* string fileAbsolutePath = karate.toAbsolutePath("<relativePath>/<file>.json")
-* string tableName = "<MY_TABLE>"
-* json result = snowflake.cli.putJsonIntoTable({ fileAbsolutePath, tableName, cliConfig, snowflakeConfig })
-* match result.status == "OK"
-----
-
 .SQL statement execution (directly with the CLI)
 [source, gherkin]
 ----
@@ -349,6 +330,33 @@ function fn() {
 ----
 
 NOTE: Limitations for SQL statement through CLI is not yet analyzed.
+
+.CSV file import into table
+[source, gherkin]
+----
+# <file>.csv :
+# FOO,BAR
+# 1,bar1
+# 2,bar2
+
+* string fileAbsolutePath = karate.toAbsolutePath("<relativePath>/<file>.csv")
+* string tableName = "<MY_TABLE>"
+* json result = snowflake.cli.putCsvIntoTable({ fileAbsolutePath, tableName, cliConfig, snowflakeConfig })
+* match result.status == "OK"
+----
+
+.JSON-line file import into table
+[source, gherkin]
+----
+# <file>.json :
+# {"FOO":1,"BAR":"bar1"}
+# {"FOO":2,"BAR":"bar2"}
+
+* string fileAbsolutePath = karate.toAbsolutePath("<relativePath>/<file>.json")
+* string tableName = "<MY_TABLE>"
+* json result = snowflake.cli.putJsonIntoTable({ fileAbsolutePath, tableName, cliConfig, snowflakeConfig })
+* match result.status == "OK"
+----
 
 ==== REST API
 .SQL statement execution
