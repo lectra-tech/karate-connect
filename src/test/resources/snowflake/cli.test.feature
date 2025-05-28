@@ -64,8 +64,7 @@ Feature: Test cli
     And match jwtParsed == '#notnull'
 
   Scenario Outline: <method>
-    Given path "statements"
-    And string scenario = "<format>_"+architecture
+    Given string scenario = "<format>_"+architecture
     And string schema = "DOCKER_IMAGES_KARATE_BUILD_CLI_"+scenario
     And json snowflakeConfigIT = read("snowflake-config.json")
     And text createStatement =
@@ -80,8 +79,7 @@ Feature: Test cli
     When json result = snowflake.cli.<method>(params)
     And match result.status == "OK"
 
-    Given path "statements"
-    And json params = ({statement: "SELECT FOO, BAR, TEST FROM MY_TABLE_<format>", snowflakeConfig: snowflakeConfigIT})
+    Given json params = ({statement: "SELECT FOO, BAR, TEST FROM MY_TABLE_<format>", snowflakeConfig: snowflakeConfigIT})
     When json result = snowflake.cli.runSql(params)
     Then match result.output == [{ "FOO":1, "BAR":"bar1", "TEST":"test1" }, { "FOO":2, "BAR":"bar2", "TEST":"test2" }]
 
