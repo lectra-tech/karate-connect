@@ -458,9 +458,9 @@ Kubectl calls
 [source, gherkin]
 ----
 # Mandatory parameters
-* string namespace = "<my-namespace>"
-* string cronJobName = "<my-cronjob-name>"
-* string jobName = "<my-created-job-name>"
+* string namespace = "my-namespace"
+* string cronJobName = "my-cronjob-name"
+* string jobName = "my-created-job-name"
 # Optional parameters with default values
 * def timeoutSeconds = 60 # (default)
 # Run the job
@@ -468,18 +468,18 @@ Kubectl calls
 * match result.status == "OK"
 * match result.jobDescription.metadata.name == jobName
 * match result.jobDescription.spec.template.spec.containers[0].name == cronJobName
-* match result.executeJobMessage == "job.batch/<my-created-job-name> created"
-* match result.waitForJobCompletionMessage == "job.batch/<my-created-job-name> condition met"
-* match result.deleteJobMessage == "job.batch/<my-created-job-name> deleted"
+* match result.executeJobMessage == "job.batch/my-created-job-name created"
+* match result.waitForJobCompletionMessage == "job.batch/my-created-job-name condition met"
+* match result.deleteJobMessage == "job.batch/my-created-job-name deleted"
 ----
 
 .Job creation from a CronJob with more optional parameters
 [source, gherkin]
 ----
 # Mandatory parameters
-* string namespace = "<my-namespace>"
-* string cronJobName = "<my-cronjob-name>"
-* string jobName = "<my-created-job-name>"
+* string namespace = "my-namespace"
+* string cronJobName = "my-cronjob-name"
+* string jobName = "my-created-job-name"
 # Optional parameters with default values
 * def timeoutSeconds = 60 # (default)
 # More optional parameters (no default values)
@@ -494,9 +494,9 @@ Kubectl calls
 * match result.jobDescription.spec.template.spec.containers[0].env == [ { "name":"MY_ENV1", "value":"MY_VALUE1" } , { "name":"MY_ENV2", "value":"MY_VALUE2" } ]
 * match result.jobDescription.spec.template.spec.containers[0].command == [ "my-command" ]
 * match result.jobDescription.spec.template.spec.containers[0].args == [ "arg1", "arg2" ]
-* match result.executeJobMessage == "job.batch/<my-created-job-name> created"
-* match result.waitForJobCompletionMessage == "job.batch/<my-created-job-name> condition met"
-* match result.deleteJobMessage == "job.batch/<my-created-job-name> deleted"
+* match result.executeJobMessage == "job.batch/my-created-job-name created"
+* match result.waitForJobCompletionMessage == "job.batch/my-created-job-name condition met"
+* match result.deleteJobMessage == "job.batch/my-created-job-name deleted"
 ----
 
 ==== More info
