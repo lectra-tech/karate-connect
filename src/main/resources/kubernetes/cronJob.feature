@@ -19,48 +19,63 @@
 @ignore
 Feature: cronJob
 
+  @ignore @createJobDescription
+  Scenario: createJobDescription
+  args = { namespace: "<my-namespace>", cronJobName: "<my-cron-job>", jobName: "<my-created-job-name>" }
+    * def mockFile = karate.get("mockJobDescription")
+    * json result = (mockFile != null ? karate.read(mockJobDescription) : karate.exec("kubectl create job "+jobName+" --namespace="+namespace+" --from=cronjob/"+cronJobName+" --dry-run=client -o 'json'"))
+
+  @ignore @executeJob
+  Scenario: executeJob
+  args = { jobDescription: { ... }, jobName: "<my-created-job-name>" }
+    * string jobDescriptionStr = jobDescription
+    * string jobDescriptionFile = karate.write(jobDescriptionStr, ""+jobName+".json")
+    * def mockFile = karate.get("mockJobDescription")
+    * string result = (mockFile != null ? "job.batch/"+jobName+" created" : karate.exec("kubectl apply -f "+jobDescriptionFile))
+    * match result == "job.batch/"+jobName+" created"
+    * karate.exec("rm "+jobDescriptionFile)
+
+  @ignore @waitForJobCompletion
+  Scenario: waitForJobCompletion
+  args = { namespace: "<my-namespace>", jobName: "<my-created-job-name>", timeoutSecondsValue: ... }
+    * def mockFile = karate.get("mockJobDescription")
+    * json result = (mockFile != null ? { message : "job.batch/"+jobName+" condition met"} : karate.exec("kubectl wait --for=condition=complete --timeout="+timeoutSecondsValue+"s --namespace="+namespace+" job/"+jobName))
+    * match result.message == "job.batch/"+jobName+" condition met"
+
+  @ignore @deleteJob
+  Scenario: deleteJob
+  args = { namespace: "<my-namespace>", jobName: "<my-created-job-name>" }
+    * def mockFile = karate.get("mockJobDescription")
+    * string result = (mockFile != null ? "job.batch/"+jobName+" deleted" : karate.exec("kubectl delete job --namespace="+namespace+" --field-selector metadata.name="+jobName))
+    * match result == "job.batch/"+jobName+" deleted"
+
   @runJob
   Scenario: runJob
-  args = { namespace: "<my-namespace>", cronJobName: "<my-cron-job>", jobName: "<my-created-job-name>", timeoutSeconds: ... }
-  example = { namespace: "foo", cronJobName: "my-cron-job", jobName: "my-job", timeoutSeconds: 60 }
-
-  prerequisite: having $USER/.kube/config with rights on namespace
-
-    * json result = { status: "WIP" }
-    * def timeoutSecondsValue = karate.get("timeoutSeconds", 60)
-    * karate.log("Create job "+jobName+"...")
-    When result.message = karate.exec("kubectl create job --namespace="+namespace+" --from=cronjob/"+cronJobName+" "+jobName)
-    And match result.message == "job.batch/"+jobName+" created"
-    * karate.log("Get status job "+jobName+"...")
-    And result.message = karate.exec("kubectl wait --for=condition=complete --timeout="+timeoutSecondsValue+"s --namespace="+namespace+" job/"+jobName)
-    And match result.message == "job.batch/"+jobName+" condition met"
-    * karate.log("Delete job "+jobName+"...")
-    And karate.exec("kubectl delete job --namespace="+namespace+" --field-selector metadata.name="+jobName)
-    * result.status = "OK"
-
-
-  @runJobWithEnv
-  Scenario: runJobWithEnv
-  args = { namespace: "<my-namespace>", cronJobName: "<my-cron-job>", jobName: "<my-created-job-name>", timeoutSeconds: ..., env: { "KEY1": "VALUE1", ...  } }
+  args = { namespace: "<my-namespace>", cronJobName: "<my-cron-job>", jobName: "<my-created-job-name>", timeoutSeconds: ..., env: { "KEY1": "VALUE1", ...  }, command: [ "<cmd>" ], args: [ "arg1", "arg2", ... ] }
   example = { namespace: "foo", cronJobName: "my-cron-job", jobName: "my-job", timeoutSeconds: 60, env: { "MY_ENV1": "MY_VALUE1", "MY_ENV2": "MY_VALUE2" } }
-
   prerequisite: having $USER/.kube/config with rights on namespace
-
+    # args
     * json result = { status: "WIP" }
+    * def envValue = karate.get("env")
+    * def commandValue = karate.get("command")
+    * def argsValue = karate.get("args")
     * def timeoutSecondsValue = karate.get("timeoutSeconds", 60)
+    # job description
     * karate.log("Create job "+jobName+"...")
-    Given json jobDescription = karate.exec("kubectl create job "+jobName+" --namespace="+namespace+" --from=cronjob/"+cronJobName+" --dry-run=client -o 'json'")
-    And def existingEnvs = (jobDescription.spec.template.spec.containers[0].env)
-    And karate.forEach(karate.keysOf(env), function(key) { karate.appendTo(existingEnvs, ({ "name": key, "value": env[key] })); } )
-    * karate.log("New envs :"+JSON.stringify(existingEnvs))
-    And string jobDescriptionStr = jobDescription
-    Given string jobDescriptionFile = karate.write(jobDescriptionStr, ""+jobName+".json")
-    When result.message = karate.exec("kubectl apply -f "+jobDescriptionFile)
-    And match result.message == "job.batch/"+jobName+" created"
-    * karate.exec("rm "+jobDescriptionFile)
-    * karate.log("Get status job "+jobName+"...")
-    And result.message = karate.exec("kubectl wait --for=condition=complete --timeout="+timeoutSecondsValue+"s --namespace="+namespace+" job/"+jobName)
-    And match result.message == "job.batch/"+jobName+" condition met"
+    * json jobDescription = karate.call("@createJobDescription").result
+    * copy existingEnv = jobDescription.spec.template.spec.containers[0].env
+    * if (envValue != null) jobDescription.spec.template.spec.containers[0].env = (existingEnv != null ? existingEnv : []).concat((envValue != null ? karate.map(karate.keysOf(env), (key) => ({ "name": key, "value": env[key] })) : []))
+    * if (commandValue != null) jobDescription.spec.template.spec.containers[0].command = command
+    * if (argsValue != null) jobDescription.spec.template.spec.containers[0].args = args
+    * result.jobDescription = jobDescription
+    # execute job
+    * karate.log("Execute job "+jobName+"...")
+    * result.executeJobMessage = karate.call("@executeJob").result
+    # wait for job completion
+    * karate.log("Wait for job completion "+jobName+"...")
+    * result.waitForJobCompletionMessage = karate.call("@waitForJobCompletion").result.message
+    # delete job
     * karate.log("Delete job "+jobName+"...")
-    And karate.exec("kubectl delete job --namespace="+namespace+" --field-selector metadata.name="+jobName)
+    * result.deleteJobMessage = karate.call("@deleteJob").result
+    # result
     * result.status = "OK"

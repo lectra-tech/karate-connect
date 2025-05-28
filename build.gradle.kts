@@ -44,7 +44,7 @@ buildscript {
 tasks {
     test {
         useJUnitPlatform()
-        systemProperty("testExtensions", System.getProperties().getProperty("testExtensions", "rabbitmq"))
+        systemProperty("testExtensions", System.getProperties().getProperty("testExtensions", "rabbitmq,kubernetes"))
         // ensure tests are always run
         outputs.upToDateWhen { false }
     }

@@ -1,0 +1,28 @@
+{
+    "kind": "Job",
+    "apiVersion": "batch/v1",
+    "metadata": {
+        "name": "#(jobName)",
+        "creationTimestamp": null
+    },
+    "spec": {
+        "template": {
+            "metadata": {
+                "creationTimestamp": null
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "name": "#(cronJobName)",
+                        "image": "bash:latest",
+                        "resources": {},
+                        "command": [ "ls" ],
+                        "args": [ "/tmp" ]
+                    }
+                ],
+                "restartPolicy": "Never"
+            }
+        }
+    },
+    "status": {}
+}

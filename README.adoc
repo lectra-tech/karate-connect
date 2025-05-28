@@ -457,31 +457,47 @@ Kubectl calls
 .Job creation from a CronJob
 [source, gherkin]
 ----
+# Mandatory parameters
 * string namespace = "<my-namespace>"
 * string cronJobName = "<my-cronjob-name>"
 * string jobName = "<my-created-job-name>"
+# Optional parameters with default values
 * def timeoutSeconds = 60 # (default)
+# Run the job
 * json result = kubernetes.cronJob.runJob({namespace, cronJobName, jobName, timeoutSeconds})
 * match result.status == "OK"
 * karate.log(result.message)
 ----
 
-.Job creation from a CronJob with given environment variables
+.Job creation from a CronJob with more optional parameters
 [source, gherkin]
 ----
+# Mandatory parameters
 * string namespace = "<my-namespace>"
 * string cronJobName = "<my-cronjob-name>"
 * string jobName = "<my-created-job-name>"
+# Optional parameters with default values
 * def timeoutSeconds = 60 # (default)
-* json env = { "MY_ENV1": "MY_VALUE1", "MY_ENV2": "MY_VALUE2" }
-* json result = kubernetes.cronJob.runJobWithEnv({namespace, cronJobName, jobName, timeoutSeconds, env})
-* match result.status == "OK"
-* karate.log(result.message)
+# More optional parameters (no default values)
+* json env = { "MY_ENV1": "MY_VALUE1", "MY_ENV2": "MY_VALUE2" }  
+* json command = [ "my-command" ]
+* json args = [ "arg1", "arg2" ]
+# Run the job
+* json result = kubernetes.cronJob.runJob({namespace, cronJobName, jobName, timeoutSeconds, env, command, args})
+* match result.status == "OK
+* match result.jobDescription.metadata.name == jobName
+* match result.jobDescription.spec.template.spec.containers[0].name == cronJobName
+* match result.jobDescription.spec.template.spec.containers[0].env == [ { "name":"MY_ENV1", "value":"MY_VALUE1" } , { "name":"MY_ENV2", "value":"MY_VALUE2" } ]
+* match result.jobDescription.spec.template.spec.containers[0].command == [ "my-command" ]
+* match result.jobDescription.spec.template.spec.containers[0].args == [ "arg1", "arg2" ]
+* match result.executeJobMessage == "job.batch/<my-created-job-name> created"
+* match result.waitForJobCompletionMessage == "job.batch/<my-created-job-name> condition met"
+* match result.deleteJobMessage == "job.batch/<my-created-job-name> deleted"
 ----
 
 ==== More info
 * link:src/main/resources/kubernetes/karate-ext-config.js[Configuration^]
-* TODO tests
+* link:src/test/resources/kubernetes/cronJob.test.feature[Tests^]
 
 === `dbt`
 
