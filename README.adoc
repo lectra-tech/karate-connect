@@ -466,7 +466,11 @@ Kubectl calls
 # Run the job
 * json result = kubernetes.cronJob.runJob({namespace, cronJobName, jobName, timeoutSeconds})
 * match result.status == "OK"
-* karate.log(result.message)
+* match result.jobDescription.metadata.name == jobName
+* match result.jobDescription.spec.template.spec.containers[0].name == cronJobName
+* match result.executeJobMessage == "job.batch/<my-created-job-name> created"
+* match result.waitForJobCompletionMessage == "job.batch/<my-created-job-name> condition met"
+* match result.deleteJobMessage == "job.batch/<my-created-job-name> deleted"
 ----
 
 .Job creation from a CronJob with more optional parameters
@@ -484,7 +488,7 @@ Kubectl calls
 * json args = [ "arg1", "arg2" ]
 # Run the job
 * json result = kubernetes.cronJob.runJob({namespace, cronJobName, jobName, timeoutSeconds, env, command, args})
-* match result.status == "OK
+* match result.status == "OK"
 * match result.jobDescription.metadata.name == jobName
 * match result.jobDescription.spec.template.spec.containers[0].name == cronJobName
 * match result.jobDescription.spec.template.spec.containers[0].env == [ { "name":"MY_ENV1", "value":"MY_VALUE1" } , { "name":"MY_ENV2", "value":"MY_VALUE2" } ]
