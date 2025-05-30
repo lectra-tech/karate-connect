@@ -499,6 +499,13 @@ Kubectl calls
 * match result.deleteJobMessage == "job.batch/my-created-job-name deleted"
 ----
 
+[NOTE]
+====
+* `env`: if the cronjob has already some environment variables, they will be merged with the new ones.
+* `command` and `args`: if the cronjob has already some command or args, they will be replaced by the new ones.
+====
+
+
 ==== More info
 * link:src/main/resources/kubernetes/karate-ext-config.js[Configuration^]
 * link:src/test/resources/kubernetes/cronJob.test.feature[Tests^]
