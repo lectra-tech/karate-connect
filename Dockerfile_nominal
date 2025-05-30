@@ -1,7 +1,7 @@
 ARG BASE_IMAGE="karate-connect:python"
 FROM ${BASE_IMAGE} AS nominal
 # Install kubectl
-ARG KUBECTL_VERSION=1.32
+ARG KUBECTL_VERSION=1.33
 RUN apt-get update && apt-get -y install apt-transport-https ca-certificates curl gnupg
 RUN mkdir -p -m 755 /etc/apt/keyrings && \
     curl -fsSL https://pkgs.k8s.io/core:/stable:/v${KUBECTL_VERSION}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg

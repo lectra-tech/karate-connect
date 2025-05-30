@@ -1,7 +1,7 @@
 ARG BASE_IMAGE="karate-connect:python"
 FROM ${BASE_IMAGE} AS aks
 # Install azure-cli
-ARG AZ_VER=2.68.0
+ARG AZ_VER=2.73.0
 ARG TARGETPLATFORM
 RUN apt-get update && apt-get -y install apt-transport-https ca-certificates curl gnupg lsb-release
 RUN mkdir -p /etc/apt/keyrings && \
@@ -11,6 +11,6 @@ RUN ARCH=$(echo -n ${TARGETPLATFORM} | cut -d'/' -f2) && echo "deb [arch=${ARCH}
     tee /etc/apt/sources.list.d/azure-cli.list
 RUN apt-get update && apt-get -y install azure-cli=${AZ_VER}-1~$(lsb_release -cs)
 # Install kubelogin & kubectl
-ARG KUBECTL_VERSION=1.32.1
-ARG KUBELOGIN_VERSION=0.1.7
+ARG KUBECTL_VERSION=1.33.1
+ARG KUBELOGIN_VERSION=0.2.8
 RUN az aks install-cli --client-version ${KUBECTL_VERSION} --kubelogin-version ${KUBELOGIN_VERSION}
