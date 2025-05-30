@@ -26,6 +26,7 @@ Feature: init
     * karate.exec("rm -f "+result)
     # decode key
     * string keyBase64 = karate.properties["snowflake.privateKeyBase64"]
+    * if (keyBase64 == null || keyBase64 == "") karate.fail("snowflake.privateKeyBase64 property is not set")
     * karate.log("keyBase64: "+keyBase64)
     * def key = Java.type('java.util.Base64').getDecoder().decode(keyBase64)
     * def String = Java.type('java.lang.String')
