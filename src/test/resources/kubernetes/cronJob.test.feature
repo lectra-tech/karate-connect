@@ -31,7 +31,7 @@ Feature: Test cronJob
     And match result.jobDescription.spec.template.spec.containers[0].args == [ "/tmp" ]
     And match result.executeJobMessage == "job.batch/my-job created"
     And match result.waitForJobCompletionMessage == "job.batch/my-job condition met"
-    And match result.deleteJobMessage == "job.batch/my-job deleted"
+    And match result.deleteJobMessage == 'job.batch "my-job" deleted'
 
   Scenario: withEnvCommandAndArgs
     Given string mockJobDescription = "classpath:kubernetes/job-description.json"
@@ -45,7 +45,7 @@ Feature: Test cronJob
     And match result.jobDescription.spec.template.spec.containers[0].args == [ "Hello", "World" ]
     And match result.executeJobMessage == "job.batch/my-job created"
     And match result.waitForJobCompletionMessage == "job.batch/my-job condition met"
-    And match result.deleteJobMessage == "job.batch/my-job deleted"
+    And match result.deleteJobMessage == 'job.batch "my-job" deleted'
 
   Scenario: completeExistingEnv
     Given string mockJobDescription = "classpath:kubernetes/job-description-with-env.json"
@@ -56,4 +56,4 @@ Feature: Test cronJob
     And match result.jobDescription.spec.template.spec.containers[0].args == [ "Hello", "World" ]
     And match result.executeJobMessage == "job.batch/my-job created"
     And match result.waitForJobCompletionMessage == "job.batch/my-job condition met"
-    And match result.deleteJobMessage == "job.batch/my-job deleted"
+    And match result.deleteJobMessage == 'job.batch "my-job" deleted'

@@ -39,15 +39,15 @@ Feature: cronJob
   Scenario: waitForJobCompletion
   args = { namespace: "<my-namespace>", jobName: "<my-created-job-name>", timeoutSecondsValue: ... }
     * def mockFile = karate.get("mockJobDescription")
-    * json result = (mockFile != null ? { message : "job.batch/"+jobName+" condition met"} : karate.exec("kubectl wait --for=condition=complete --timeout="+timeoutSecondsValue+"s --namespace="+namespace+" job/"+jobName))
-    * match result.message == "job.batch/"+jobName+" condition met"
+    * json result = (mockFile != null ? "job.batch/"+jobName+" condition met" : karate.exec("kubectl wait --for=condition=complete --timeout="+timeoutSecondsValue+"s --namespace="+namespace+" job/"+jobName))
+    * match result == "job.batch/"+jobName+" condition met"
 
   @ignore @deleteJob
   Scenario: deleteJob
   args = { namespace: "<my-namespace>", jobName: "<my-created-job-name>" }
     * def mockFile = karate.get("mockJobDescription")
-    * string result = (mockFile != null ? "job.batch/"+jobName+" deleted" : karate.exec("kubectl delete job --namespace="+namespace+" --field-selector metadata.name="+jobName))
-    * match result == "job.batch/"+jobName+" deleted"
+    * string result = (mockFile != null ? 'job.batch "'+jobName+'" deleted' : karate.exec("kubectl delete job --namespace="+namespace+" --field-selector metadata.name="+jobName))
+    * match result == 'job.batch "'+jobName+'" deleted'
 
   @runJob
   Scenario: runJob
@@ -62,7 +62,7 @@ Feature: cronJob
     * def timeoutSecondsValue = karate.get("timeoutSeconds", 60)
     # job description
     * karate.log("Create job "+jobName+"...")
-    * json jobDescription = karate.call("@createJobDescription").result
+    * json jobDescription = karate.call("@createJobDescription", ({ namespace, cronJobName, jobName })).result
     * copy existingEnv = jobDescription.spec.template.spec.containers[0].env
     * if (envValue != null) jobDescription.spec.template.spec.containers[0].env = (existingEnv != null ? existingEnv : []).concat((envValue != null ? karate.map(karate.keysOf(env), (key) => ({ "name": key, "value": env[key] })) : []))
     * if (commandValue != null) jobDescription.spec.template.spec.containers[0].command = command
@@ -70,12 +70,12 @@ Feature: cronJob
     * result.jobDescription = jobDescription
     # execute job
     * karate.log("Execute job "+jobName+"...")
-    * result.executeJobMessage = karate.call("@executeJob").result
+    * result.executeJobMessage = karate.call("@executeJob", ({ jobDescription, jobName })).result
     # wait for job completion
     * karate.log("Wait for job completion "+jobName+"...")
-    * result.waitForJobCompletionMessage = karate.call("@waitForJobCompletion").result.message
+    * result.waitForJobCompletionMessage = karate.call("@waitForJobCompletion", ({ namespace, jobName, timeoutSecondsValue})).result
     # delete job
     * karate.log("Delete job "+jobName+"...")
-    * result.deleteJobMessage = karate.call("@deleteJob").result
+    * result.deleteJobMessage = karate.call("@deleteJob", ({ namespace, jobName })).result
     # result
     * result.status = "OK"
