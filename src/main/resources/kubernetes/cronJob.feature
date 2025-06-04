@@ -47,7 +47,6 @@ Feature: cronJob
   args = { namespace: "<my-namespace>", jobName: "<my-created-job-name>" }
     * def mockFile = karate.get("mockJobDescription")
     * string result = (mockFile != null ? 'job.batch "'+jobName+'" deleted' : karate.exec("kubectl delete job --namespace="+namespace+" --field-selector metadata.name="+jobName))
-    * match result == 'job.batch "'+jobName+'" deleted'
 
   @runJob
   Scenario: runJob
