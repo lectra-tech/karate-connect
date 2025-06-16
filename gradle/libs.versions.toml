@@ -5,7 +5,7 @@ amqp-client = "5.25.0"
 qpidbrokerj = "9.2.1"
 awaitility = "4.3.0"
 assertj = "3.27.3"
-grgit = "5.3.0"
+grgit = "5.3.2"
 
 [libraries]
 karate-core = { module = "io.karatelabs:karate-core", version.ref = "karate" }
