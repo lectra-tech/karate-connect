@@ -73,7 +73,7 @@ jobs:
         if: ${{ env.RELEASE_MODE == 'true' && github.repository == env.ORIGIN_REPOSITORY }}
         uses: sigstore/cosign-installer@fb28c2b6339dcd94da6e4cbcbc5e888961f6f8c3 # v3.9.0
         with:
-          cosign-release: 'v2.4.2'
+          cosign-release: 'v2.5.2'
 
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata - builder
