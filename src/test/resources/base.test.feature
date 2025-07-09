@@ -97,8 +97,8 @@ Feature: Test base
     Then match myTable3 == [{ "name": "foo" }, { "name": "bar" }]
 
   Scenario Outline: hash.<algorithm>
-    Given def data = <data>
-    When def hash = base.hash.<algorithm>(data)
+    Given string data = <data>
+    When string hash = base.hash.<algorithm>(data)
     Then match hash == <expectedHash>
 
     Examples:
