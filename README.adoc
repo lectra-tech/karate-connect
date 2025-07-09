@@ -121,6 +121,12 @@ Some common functions added to the Karate DSL
 * string str = base.json.toString({foo:"bar"})                # str='{"foo":"bar"}'
 * string str = base.json.readLines("file.json")               # str='{"id":"1c4b..."}\n{"id":"2a02..."}' with file.json = '{"id":"#(base.random.uuid())"}\n{"id":"#(base.random.uuid())"}'
 * def bool   = base.assert.withEpsilon(0.1234, 0.12, epsilon) # bool=true if epsilon=1E-2, false if epsilon=1E-3
+* def hash   = base.hash.md5("hello world")                   # hash='5eb63bbbe01eeed093cb22bb8f5acdc3'
+* def hash   = base.hash.sha1("hello world")                  # hash='2aae6c35c94fcfb415dbe95f408b9ce91ee846ed'
+* def hash   = base.hash.sha224("hello world")                # hash='2f05477fc24bb4faefd86517156dafdecec45b8ad3cf2522a563582b'
+* def hash   = base.hash.sha256("hello world")                # hash='b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9'
+* def hash   = base.hash.sha384("hello world")                # hash='5eb63bbbfdbd8e75a67f29f701a4e040385e2e23986303ea10239211af907fcbb83578b3e417cb71ce646efd0819dd8c088de1bde01eeed093cb22bb8f5acdc3'
+* def hash   = base.hash.sha512("hello world")                # hash='309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f'
 ----
 
 NOTE: This extension is loaded by default.

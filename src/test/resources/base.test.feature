@@ -1,21 +1,21 @@
 ##
- # Copyright (C) 2025 Lectra
- #
- # Licensed under the Apache License, Version 2.0 (the "License");
- # you may not use this file except in compliance with the License.
- # You may obtain a copy of the License at
- #
- #     https://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
- #
- # SPDX-License-Identifier: Apache-2.0
- # License-Filename: LICENSE
- ##
+# Copyright (C) 2025 Lectra
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+# License-Filename: LICENSE
+##
 @base
 Feature: Test base
 
@@ -28,7 +28,7 @@ Feature: Test base
     Then match result == '#number ? _ > 0'
 
   Scenario: bug JSON.stringify
-  https://github.com/karatelabs/karate/issues/2581
+    https://github.com/karatelabs/karate/issues/2581
     Given json myJson = { "myField":  0.10738338032073512 }
     When string value = JSON.stringify(myJson)
     And string value2 = (myJson)
@@ -47,10 +47,10 @@ Feature: Test base
     And def myDate = java.time.OffsetDateTime.of(2020, 1, 1, 0, 0, 0, 0, java.time.ZoneOffset.UTC)
     And string jsonContent = base.json.readLines("files/test-json-lines-token.json")
     And text expected =
-"""
-{"FOO":1,"BAR":"valueBar1","TEST":"prefix-valueTest-suffix","DATE":"2020-01-01T00:00Z"}
-{"FOO":2,"BAR":"baz","TEST":"prefix-valueTest-suffix","DATE":"2020-01-01T00:00Z"}
-"""
+      """
+      {"FOO":1,"BAR":"valueBar1","TEST":"prefix-valueTest-suffix","DATE":"2020-01-01T00:00Z"}
+      {"FOO":2,"BAR":"baz","TEST":"prefix-valueTest-suffix","DATE":"2020-01-01T00:00Z"}
+      """
     And match jsonContent.trim() == expected.trim()
 
   Scenario: time.offsetDateTimeNow
@@ -96,4 +96,17 @@ Feature: Test base
       | name | "foo" | "bar" |
     Then match myTable3 == [{ "name": "foo" }, { "name": "bar" }]
 
+  Scenario Outline: hash.<algorithm>
+    Given def data = <data>
+    When def hash = base.hash.<algorithm>(data)
+    Then match hash == <expectedHash>
+
+    Examples:
+      | algorithm | data          | expectedHash                                                                                                                       |
+      | md5       | "hello world" | "5eb63bbbe01eeed093cb22bb8f5acdc3"                                                                                                 |
+      | sha1      | "hello world" | "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed"                                                                                         |
+      | sha224    | "hello world" | "2f05477fc24bb4faefd86517156dafdecec45b8ad3cf2522a563582b"                                                                         |
+      | sha256    | "hello world" | "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"                                                                 |
+      | sha384    | "hello world" | "fdbd8e75a67f29f701a4e040385e2e23986303ea10239211af907fcbb83578b3e417cb71ce646efd0819dd8c088de1bd"                                 |
+      | sha512    | "hello world" | "309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f" |
 

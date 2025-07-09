@@ -34,6 +34,11 @@ function fn() {
         }).join("\n");
     };
     const assertWithEpsilon= (actual, expected, epsilon) => (java.lang.Math.abs(actual - expected) <= epsilon);
+    const hash = (algorithm, data) => {
+        const digest = Java.type("java.security.MessageDigest").getInstance(algorithm);
+        digest.update(data.getBytes("UTF-8"), 0, data.length);
+        return Java.type("java.util.HexFormat").of().formatHex(digest.digest());
+    };
     let config = {
         "base" : {
             "random": {
@@ -49,6 +54,14 @@ function fn() {
             },
             "assert": {
                 "withEpsilon": assertWithEpsilon
+            },
+            "hash": {
+                "md5": (data) => hash("MD5", data),
+                "sha1": (data) => hash("SHA-1", data),
+                "sha224": (data) => hash("SHA-224", data),
+                "sha256": (data) => hash("SHA-256", data),
+                "sha384": (data) => hash("SHA-384", data),
+                "sha512": (data) => hash("SHA-512", data)
             }
         }
     };
