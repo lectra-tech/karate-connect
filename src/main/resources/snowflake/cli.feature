@@ -39,7 +39,7 @@ Feature: cli
   @generateJwt
   Scenario: generateJwt
   args = { account: "<my-account>", user: "<my-user>", privateKeyPath: "<path>/<filename>.pem", privateKeyPassphrase: "<passphrase>" }
-    * string result = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+privateKeyPassphrase+" snow --config-file "+snowflake.configTomlPath+" connection generate-jwt --silent --account "+account+" --user "+user+" --private-key-file "+privateKeyPath+"'")
+    * string result = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+privateKeyPassphrase+" snow --config-file "+snowflake.configTomlPath+" connection generate-jwt --silent --account "+account+" --user "+user+" --private-key-file "+privateKeyPath+" 2>/dev/null'")
     * match result == "#regex .+\\..+\\..+"
 
   @ignore @putFileIntoTable
