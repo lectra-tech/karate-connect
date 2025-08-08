@@ -1,0 +1,5 @@
+{
+  "bootstrap.servers": #(karate.properties['kafka.bootstrap.servers']),
+  "schema.registry.url": #(karate.properties['kafka.schema.registry.url']),
+  "karate.connect.consumer.group.id.prefix": "karate-connect-"
+}

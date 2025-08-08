@@ -16,8 +16,23 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.lectra.karate.connect
+function fn() {
+    karate.log("Karate Ext Config Kafka");
+    const KafkaClient = Java.type("com.lectra.karate.connect.kafka.KafkaClient");
 
-enum class Extension {
-    base, rabbitmq, kafka, snowflake, dbt, kubernetes
+    const kafkaConfigFromEnv = {
+        "bootstrap.servers": java.lang.System.getenv("KAFKA_BOOTSTRAP_SERVERS"),
+        "schema.registry.url": java.lang.System.getenv("KAFKA_SCHEMA_REGISTRY_URL"),
+
+    };
+    const defaultConfig = {
+        "configFromEnv": kafkaConfigFromEnv,
+        "KafkaClient": KafkaClient
+    };
+
+    const generatedConfig = karate.read('classpath:kafka/kafka.js');
+    return {
+        ...defaultConfig,
+        ...generatedConfig
+    };
 }
