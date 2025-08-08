@@ -4,7 +4,7 @@ karate = "1.5.1"
 amqp-client = "5.26.0"
 qpidbrokerj = "9.2.1"
 awaitility = "4.3.0"
-assertj = "3.27.3"
+assertj = "3.27.4"
 grgit = "5.3.2"
 
 [libraries]
