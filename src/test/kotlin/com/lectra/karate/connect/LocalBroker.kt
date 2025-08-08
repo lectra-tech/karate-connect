@@ -18,6 +18,25 @@
  */
 package com.lectra.karate.connect
 
-enum class Extension {
-    base, rabbitmq, kafka, snowflake, dbt, kubernetes
+import java.io.IOException
+import java.io.UncheckedIOException
+import java.net.ServerSocket
+
+interface LocalBroker {
+
+    fun start()
+
+    fun stop()
+
+    companion object {
+        fun freePort(): Int {
+            try {
+                ServerSocket(0).use { server ->
+                    return server.localPort
+                }
+            } catch (e: IOException) {
+                throw UncheckedIOException(e)
+            }
+        }
+    }
 }

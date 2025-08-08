@@ -18,10 +18,9 @@
  */
 package com.lectra.karate.connect.rabbitmq
 
+import com.lectra.karate.connect.BrokerClient
 import com.rabbitmq.client.*
 import org.awaitility.kotlin.await
-import org.slf4j.LoggerFactory
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -39,8 +38,7 @@ class RabbitmqClient(
     private val username: String,
     private val password: String,
     private val ssl: Boolean
-) : AutoCloseable {
-    private val LOGGER = LoggerFactory.getLogger(RabbitmqClient::class.java)
+) : BrokerClient() {
 
     private fun initConnection(): Connection {
         val self = this
@@ -87,32 +85,6 @@ class RabbitmqClient(
 
     private fun handleChannel(channel: AtomicReference<Channel>) =
         channel.updateAndGet({ if (it.isOpen) it else handleConnection().createChannel() })
-
-    init {
-        logExecution("Initializing ${this.javaClass.simpleName}") {
-            Runtime.getRuntime().addShutdownHook(Thread {
-                logExecution("Closing ${this.javaClass.simpleName}") {
-                    close()
-                }
-            })
-        }
-    }
-
-    private fun <T> logExecution(message: String, block: () -> T): T {
-        val text = "$message..."
-        LOGGER.info(text)
-        val result = try {
-            block()
-        } catch (e: IOException) {
-            LOGGER.error("${text}FAILED", e.cause)
-            throw e
-        } catch (t: Throwable) {
-            LOGGER.error("${text}FAILED", t)
-            throw t
-        }
-        LOGGER.info("${text}DONE")
-        return result
-    }
 
     fun exchange(name: String, type: String, durable: Boolean, autoDelete: Boolean) {
         logExecution("Creating exchange $name") {

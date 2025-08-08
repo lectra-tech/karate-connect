@@ -6,6 +6,9 @@ qpidbrokerj = "9.2.1"
 awaitility = "4.3.0"
 assertj = "3.27.4"
 grgit = "5.3.2"
+kafka-clients = "4.0.0"
+embedded-kafka-schema-registry = "8.0.0"
+confluent = "8.0.0"
 
 [libraries]
 karate-core = { module = "io.karatelabs:karate-core", version.ref = "karate" }
@@ -16,6 +19,11 @@ qpid-broker-plugins-amqp = { module = "org.apache.qpid:qpid-broker-plugins-amqp-
 qpid-broker-plugins-memory-store = { module = "org.apache.qpid:qpid-broker-plugins-memory-store", version.ref = "qpidbrokerj" }
 awaitility-kotlin = { module = "org.awaitility:awaitility-kotlin", version.ref = "awaitility" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka-clients" }
+kafka-avro-serializer = { module = "io.confluent:kafka-avro-serializer", version.ref = "confluent" }
+kafka-json-schema-serializer = { module = "io.confluent:kafka-json-schema-serializer", version.ref = "confluent" }
+kafka-protobuf-serializer = { module = "io.confluent:kafka-protobuf-serializer", version.ref = "confluent" }
+embedded-kafka-schema-registry = { module = "io.github.embeddedkafka:embedded-kafka-schema-registry_3", version.ref = "embedded-kafka-schema-registry" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

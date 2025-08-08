@@ -20,9 +20,11 @@ package com.lectra.karate.connect
 
 import com.intuit.karate.Results
 import com.intuit.karate.Runner
+import com.lectra.karate.connect.kafka.LocalKafkaBroker
 import com.lectra.karate.connect.rabbitmq.LocalRabbitmqBroker
 import com.lectra.karate.connect.rabbitmq.Message
 import com.lectra.karate.connect.rabbitmq.SimpleServer
+import org.apache.kafka.clients.CommonClientConfigs
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -31,8 +33,13 @@ import java.util.*
 
 class AllFeaturesTest {
 
+    // rabbitmq
     private val localRabbitmqBroker = LocalRabbitmqBroker()
     private lateinit var server: SimpleServer
+
+    // kafka
+    private val localKafkaBroker = LocalKafkaBroker()
+
     private val testExtensions = System.getProperties().getProperty("testExtensions").split(",").toSet().mapNotNull {
         try {
             Extension.valueOf(it)
@@ -57,6 +64,9 @@ class AllFeaturesTest {
             server.start(exchangeName = "myexchangerpc", exchangeType = "topic", routingKey = "my.routing.key") {
                 if (it.bodyToString() == "ping") Message.from("pong", it.propertiesToMap()) else null
             }
+        }
+        if (testExtensions.contains(Extension.kafka)) {
+            localKafkaBroker.start()
         }
     }
 
@@ -86,6 +96,14 @@ class AllFeaturesTest {
             props.addAll(
                 listOf(
                     "rabbitmq.port" to localRabbitmqBroker.info.port.toString()
+                )
+            )
+        }
+        if (testExtensions.contains(Extension.kafka)) {
+            props.addAll(
+                listOf(
+                    "kafka.bootstrap.servers" to localKafkaBroker.bootstrapServers(),
+                    "kafka.schema.registry.url" to localKafkaBroker.schemaRegistryUrl()
                 )
             )
         }
