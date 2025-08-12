@@ -33,7 +33,13 @@ function fn() {
             return (fileObject != null ? base.json.toString(fileObject) : "");
         }).join("\n");
     };
-    const assertWithEpsilon= (actual, expected, epsilon) => (java.lang.Math.abs(actual - expected) <= epsilon);
+    const assertWithEpsilon = (actual, expected, epsilon) => {
+        const result = java.lang.Math.abs(actual - expected) <= epsilon;
+        if (!result) {
+            karate.log("Assertion failed: expected " + expected + " but got " + actual + " with epsilon " + epsilon);
+        }
+        return result;
+    };
     const hash = (algorithm, data) => {
         const digest = Java.type("java.security.MessageDigest").getInstance(algorithm);
         digest.update(data.getBytes("UTF-8"), 0, data.length);
