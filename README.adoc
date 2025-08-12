@@ -579,7 +579,7 @@ NOTE: Limitations for SQL statement through CLI is not yet analyzed.
 * json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadata: {...}, recordValue: {...}})
 * match result.status == "OK"
 # Single row from files
-* json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadataFile: "<file-metadata-path>", recordValue: "<file-value-path>"})
+* json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadataFile: "<file-metadata-path>", recordValueFile: "<file-value-path>"})
 * match result.status == "OK"
 # Many rows
 * json result = snowflake.rest.insertRowsIntoStagingTable({...restConfigLocal, table, records: [ {recordMetadata: {...}, recordValue: {...}}, ... ]})
