@@ -14,8 +14,10 @@ plugins {
 }
 
 repositories {
-    // Use Maven Central for resolving dependencies.
     mavenCentral()
+    maven {
+        url = uri("https://packages.confluent.io/maven")
+    }
 }
 
 java {
@@ -26,12 +28,17 @@ java {
 dependencies {
     implementation(libs.amqp.client)
     implementation(libs.awaitility.kotlin)
+    implementation(libs.kafka.clients)
+    implementation(libs.kafka.avro.serializer)
+    implementation(libs.kafka.json.schema.serializer)
+    implementation(libs.kafka.protobuf.serializer)
     runtimeClasspath(libs.karate.core)
     testImplementation(libs.karate.junit5)
     testImplementation(libs.qpid.broker.core)
     testImplementation(libs.qpid.broker.plugins.amqp)
     testImplementation(libs.assertj.core)
     testRuntimeOnly(libs.qpid.broker.plugins.memory.store)
+    testImplementation(libs.embedded.kafka.schema.registry)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -44,7 +51,7 @@ buildscript {
 tasks {
     test {
         useJUnitPlatform()
-        systemProperty("testExtensions", System.getProperties().getProperty("testExtensions", "rabbitmq,kubernetes"))
+        systemProperty("testExtensions", System.getProperties().getProperty("testExtensions", "rabbitmq,kafka,kubernetes"))
         // ensure tests are always run
         outputs.upToDateWhen { false }
     }

@@ -138,7 +138,7 @@ NOTE: This extension is loaded by default.
 
 === `rabbitmq`
 
-Rabbitmq topology creations & message publications/consumptions
+Rabbitmq topology creation & messages publication/consumption
 
 ==== Config
 
@@ -158,8 +158,7 @@ Rabbitmq topology creations & message publications/consumptions
 
 NOTE: It will be closed automatically when no longer in use.
 
-TIP: It should be created only once!
-Declare it in your `karate-config.js`
+TIP: It should be created only once! Declare it in your `karate-config.js`
 
 .`karate-config.js` with your `rabbitmqClient`
 [source,javascript]
@@ -275,6 +274,177 @@ Nevertheless, it is possible if you need.
 * link:src/main/resources/rabbitmq/karate-ext-config.js[Configuration^]
 * link:src/test/resources/rabbitmq/rabbitmq.test.feature[Tests^]
 
+=== `kafka`
+Kafka topics creation & subjects registration & messages production/consumption
+
+==== Config
+.Kafka client config
+[source,gherkin]
+----
+# built from environment variables KAFKA_BOOTSTRAP_SERVERS, KAFKA_SCHEMA_REGISTRY_URL,
+# KAFKA_SCHEMA_REGISTRY_BASIC_AUTH_CREDENTIALS_SOURCE, KAFKA_SCHEMA_REGISTRY_KEY, KAFKA_SCHEMA_REGISTRY_SECRET
+* json kafkaConfigNoSecurityFromEnv = kafka.configFromEnv
+
+# built from previous environment variables +
+# KAFKA_SECURITY_PROTOCOL, KAFKA_SASL_MECHANISM, KAFKA_USERNAME, KAFKA_PASSWORD
+* json kafkaConfigSaslFromEnv = kafka.kafkaConfigSaslFromEnv
+
+# define your own Kafka client config
+* json kafkaConfigFromValue = { bootstrapServers: "localhost:9092", schemaRegistryUrl: "http://localhost:8081" }
+
+# read a JSON file with your Kafka client config
+* json kafkaConfigFromJsonFile = read("my-kafka-config.json")
+----
+
+.All available Kafka parameters, with example values
+[source,json]
+----
+{
+    "bootstrap.servers": "localhost:9092",
+    "schema.registry.url": "http://localhost:8081",
+    "basic.auth.credentials.source": "USER_INFO",
+    "basic.auth.user.info": "myregistrykey:myregistrysecret",
+    "security.protocol": "SASL_SSL",
+    "sasl.mechanism": "SCRAM-SHA-512",
+    "sasl.jaas.config": "org.apache.kafka.common.security.scram.ScramLoginModule required username='myuser' password='mypassword';",
+    "karate.connect.consumer.group.id.prefix": "FOO-"
+}
+----
+
+
+[NOTE]
+====
+* Created consumer group ID will be a UUID, prefixed by `karate.connect.consumer.group.id.prefix` if set
+* If `basic.auth.credentials.source` is set, only `USER_INFO`  (basic authentication) is supported (required for Confluent Cloud Schema Registry)
+====
+
+.Kafka client
+[source,gherkin]
+----
+* def kafkaClient = kafka.topology.createClient(kafkaConfig)
+----
+
+NOTE: It will be closed automatically (and all created consumer groups) when no longer in use.
+
+TIP: It should be created only once! Declare it in your `karate-config.js`
+
+.`karate-config.js` with your `kafkaClient`
+[source,javascript]
+----
+function fn() {
+  const kafkaConfig = ...;
+  const kafkaClient = karate.callSingle("classpath:kafka/topology.feature@createClient", kafkaConfig).result;
+  return {
+    "kafkaClient": kafkaClient
+  };
+}
+----
+
+==== Topology
+
+These operations should not normally be performed by Karate.
+Nevertheless, it is possible if you need.
+
+.Topic creation
+[source,gherkin]
+----
+* json topicConfig = ({ kafkaClient, topic: "mytopic", partitions: 2(default 1), replicationFactor: 1(default 1)})
+* json result = kafka.topology.createTopic(topicConfig)
+* match result.status == "OK"
+----
+
+.Subject registration (AVRO or PROTOBUF or JSON)
+[source,gherkin]
+----
+* string subjectName = "mysubject"
+* string subjectType = "AVRO|PROTOBUF|JSON"
+* string schemaString = "..."
+* json registerResult = kafka.topology.registerSubject({ kafkaClient, subjectName, subjectType, schemaString })
+* match registerResult.status == "OK"
+* match registerResult.schemaId == "#number? _ > 0"
+----
+
+==== Message
+.Message publication with headers
+[source,gherkin]
+----
+* json record = ({ key: "myKey", value: "my message", headers: { header1: "foo", header2: "bar" } })
+* json result = kafka.message.produce({ kafkaClient, topic: "mytopic", record })
+* match result.status == "OK"
+* match result.recordMetadata.serializedKeySize == "#number? _ > 0"
+* match result.recordMetadata.serializedValueSize == "#number? _ > 0"
+* match result.recordMetadata.topic == "mytopic"
+* match result.recordMetadata.partition == 0
+* match result.recordMetadata.timestamp == "#number? _ > 0"
+* match result.recordMetadata.offset == 0
+----
+
+NOTE: Only Map<String, String> headers are supported.
+
+.Message publication with subjects
+[source,gherkin]
+----
+* json record = ({ key: '{ "foo": "foo1" }' , value: '{ "bar": 42 }' })
+* json result = kafka.message.produce({ kafkaClient, topic: "mytopic", keySubject: "my-key-avro-subject", valueSubject: "my-value-json-subject", record })
+* match result.status == "OK"
+----
+
+.Consumer creation
+[source,gherkin]
+----
+* json result = kafka.message.subscribe({ kafkaClient, topic: "mytopic" })
+* match result.status == "OK"
+* json consumer = result.consumer
+* match consumer.topic == "mytopic"
+# if `karate.connect.consumer.group.id.prefix` is set, groupId = "<prefix><uuid>", else "<uuid>"
+* match consumer.groupId == "#uuid"
+----
+
+NOTE: A created consumer will read a topic from the latest record by partition, when its subscription has been initialized.
+
+.Message consumption
+[source,gherkin]
+----
+* json consumer = ...
+* json result = kafka.message.consume({ consumer, pollDurationSeconds: 1(default 1), timeoutSeconds: 60(default 60), maxMessages: 1(default 100) })
+* match result.status == "OK"
+* match (result.data.length) == 1
+* match result.data[0] == { "key":"mykey", "value":"my message", "headers":{ ... } }
+----
+
+[NOTE]
+====
+* A loop is created : the consumption is polling during `pollDurationSeconds` seconds.
+* The loop is stopped if at least `maxMessages` messages are found or `timeoutSeconds` seconds is reached.
+* If more records are found, only the first `maxMessages` records are returned.
+====
+
+.Message consumption by key (same behavior as `consume`, but with a key for record filtering)
+[source,gherkin]
+----
+* json consumer = ...
+* json result = kafka.message.consumeByKey({ consumer, key: "mykey" pollDurationSeconds: 1(default 1), timeoutSeconds: 60(default 60), maxMessages: 1(default 100) })
+* match result.status == "OK"
+* match (result.data.length) == 1
+* match result.data[0] == { "key":"mykey", "value":"my message", "headers":{ ... } }
+----
+
+.Message consumption with subjects
+[source,gherkin]
+----
+* json consumer = ...
+* json result = kafka.message.consume({ consumer, pollDurationSeconds: 1, timeoutSeconds: 60, maxMessages: 1, keySubject: "my-key-avro-subject", valueSubject: "my-value-json-subject" })
+* match result.status == "OK"
+* match (result.data.length) == 1
+* match result.data[0].key == { "foo": "foo1" }
+* match result.data[0].value == { "bar": 42 }
+----
+
+==== More info
+
+* link:src/main/resources/kafka/karate-ext-config.js[Configuration^]
+* link:src/test/resources/kafka/kafka.test.feature[Tests^]
+
 === `snowflake`
 
 Snowflake CLI / Snowflake REST API calls
@@ -309,15 +479,14 @@ For the fat JAR usage, you have to install https://pypi.org/project/snowflake-cl
 * match jwt === '#regex .+\\..+\\..+'
 ----
 
-TIP: The JWT should be created once (on once per scenario). Declare it in your `karate-config.js`
+TIP: The JWT should be created once. Declare it in your `karate-config.js`
 
-.`karate-config.js` with your `rabbitmqClient`
+.`karate-config.js` with jwt generation
 [source,javascript]
 ----
 function fn() {
   const cliConfig = ...;
-  const jwt = karate.callSingle("classpath:snowflake/cli.feature@generateJwt", cliConfig).result; // once
-  // const jwt = karate.call("classpath:snowflake/cli.feature@generateJwt", cliConfig).result; // once per scenario
+  const jwt = karate.callSingle("classpath:snowflake/cli.feature@generateJwt", cliConfig).result;
   return {
     "jwt": jwt,
     "cliConfig": cliConfig,
