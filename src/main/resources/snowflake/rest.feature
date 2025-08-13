@@ -32,7 +32,7 @@ Feature: rest
   args = { statement: "...", snowflakeConfig: { ... } }
     * json payload = ({ ...snowflakeConfig, statement: statement })
     * if (!payload["timeout"]) { payload.timeout = 60 }
-    * if (!payload["parameters"]) { payload.parameters = { "TIMESTAMP_TZ_OUTPUT_FORMAT": "YYYY-MM-DDTHH24:MI:SS.FFTZH:TZM", "TIMESTAMP_NTZ_OUTPUT_FORMAT": "YYYY-MM-DDTHH24:MI:SS.FF3", "DATE_OUTPUT_FORMAT": "YYYY-MM-DD" } }
+    * if (!payload["parameters"]) { payload.parameters = { "TIMESTAMP_TZ_OUTPUT_FORMAT": "YYYY-MM-DDTHH24:MI:SS.FFTZH:TZM", "TIMESTAMP_NTZ_OUTPUT_FORMAT": "YYYY-MM-DDTHH24:MI:SS.FF", "DATE_OUTPUT_FORMAT": "YYYY-MM-DD" } }
 
   @ignore @wait200
   Scenario: wait200
