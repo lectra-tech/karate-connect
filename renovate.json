@@ -29,6 +29,13 @@
         "snowflake-cli"
       ],
       "allowedVersions": ">3.10.0"
+    },
+    {
+      "description": "kafka-clients < 5.0.0",
+      "matchDepNames": [
+        "org.apache.kafka:kafka-clients"
+      ],
+      "allowedVersions": "<5.0.0"
     }
   ]
 }
