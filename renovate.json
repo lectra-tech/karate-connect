@@ -24,11 +24,11 @@
       "automergeType": "pr"
     },
     {
-      "description": "Ignore snowflake-cli 3.10.0",
+      "description": "snowflake-cli < 3.10.0",
       "matchDepNames": [
         "snowflake-cli"
       ],
-      "allowedVersions": ">3.10.0"
+      "allowedVersions": "<3.10.0"
     },
     {
       "description": "kafka-clients < 5.0.0",
