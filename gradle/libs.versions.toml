@@ -8,7 +8,7 @@ assertj = "3.27.6"
 grgit = "5.3.3"
 kafka-clients = "4.1.0"
 embedded-kafka-schema-registry = "8.0.0"
-confluent = "8.0.0"
+confluent = "8.0.1"
 
 [libraries]
 karate-core = { module = "io.karatelabs:karate-core", version.ref = "karate" }
