@@ -290,7 +290,7 @@ Kafka topics creation & subjects registration & messages production/consumption
 * json kafkaConfigSaslFromEnv = kafka.kafkaConfigSaslFromEnv
 
 # define your own Kafka client config
-* json kafkaConfigFromValue = { bootstrapServers: "localhost:9092", schemaRegistryUrl: "http://localhost:8081" }
+* json kafkaConfigFromValue = { "bootstrap.servers": "localhost:9092", "schema.registry.url": "http://localhost:8081" }
 
 # read a JSON file with your Kafka client config
 * json kafkaConfigFromJsonFile = read("my-kafka-config.json")
@@ -300,7 +300,7 @@ Kafka topics creation & subjects registration & messages production/consumption
 [source,json]
 ----
 {
-    "bootstrap.servers": "localhost:9092",
+    "bootstrap.servers": "localhost:9092",  
     "schema.registry.url": "http://localhost:8081",
     "basic.auth.credentials.source": "USER_INFO",
     "basic.auth.user.info": "myregistrykey:myregistrysecret",
