@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.2.20"
+kotlin = "2.2.21"
 karate = "1.5.1"
 amqp-client = "5.27.0"
 qpidbrokerj = "10.0.0"
