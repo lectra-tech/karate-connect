@@ -1,12 +1,12 @@
 [versions]
 kotlin = "2.2.21"
 karate = "1.5.1"
-amqp-client = "5.27.0"
+amqp-client = "5.27.1"
 qpidbrokerj = "10.0.0"
 awaitility = "4.3.0"
 assertj = "3.27.6"
 grgit = "5.3.3"
-kafka-clients = "4.1.0"
+kafka-clients = "4.1.1"
 embedded-kafka-schema-registry = "8.1.0"
 confluent = "8.1.0"
 
