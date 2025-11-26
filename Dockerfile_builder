@@ -1,10 +1,10 @@
 FROM eclipse-temurin:21.0.8_9-jdk AS builder
-# Install python & pip
-RUN apt-get update && apt-get -y install python3 python3-pip
-COPY pip.conf /root/.config/pip/pip.conf
+# Install pipx
+RUN apt-get update && apt-get -y install pipx
 # Install python packages
 COPY requirements.txt /root/.config/pip/requirements.txt
-RUN pip install -r /root/.config/pip/requirements.txt
+RUN pipx install $(cat /root/.config/pip/requirements.txt | xargs) --include-deps
+ENV PATH="/root/.local/bin:${PATH}"
 # Run test & Build jar
 COPY .git .git
 COPY src src
