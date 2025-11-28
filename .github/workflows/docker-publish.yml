@@ -76,7 +76,7 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata - builder
         id: meta-builder
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: localhost:5000/${{ env.IMAGE_NAME }}
           flavor: |
@@ -88,7 +88,7 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata - minimal
         id: meta-minimal
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -100,7 +100,7 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata - python
         id: meta-python
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: localhost:5000/${{ env.IMAGE_NAME }}
           flavor: |
@@ -112,7 +112,7 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata - nominal
         id: meta-nominal
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
@@ -124,7 +124,7 @@ jobs:
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata - aks
         id: meta-aks
-        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           flavor: |
