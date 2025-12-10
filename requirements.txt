@@ -1,2 +1,2 @@
-snowflake-cli==3.13.1
-dbt-snowflake==1.10.3
+snowflake-cli==3.14.0
+dbt-snowflake==1.10.4
