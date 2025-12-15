@@ -2,7 +2,7 @@
 kotlin = "2.2.21"
 karate = "1.5.2"
 amqp-client = "5.28.0"
-qpidbrokerj = "10.0.0"
+qpidbrokerj = "10.0.1"
 awaitility = "4.3.0"
 assertj = "3.27.6"
 grgit = "5.3.3"
