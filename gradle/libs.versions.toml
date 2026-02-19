@@ -6,7 +6,7 @@ qpidbrokerj = "10.0.1"
 awaitility = "4.3.0"
 assertj = "3.27.7"
 grgit = "5.3.3"
-kafka-clients = "4.1.1"
+kafka-clients = "4.2.0"
 embedded-kafka-schema-registry = "8.1.0"
 confluent = "8.1.1"
 
