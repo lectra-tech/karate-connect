@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.3.10"
 karate = "1.5.2"
-amqp-client = "5.28.0"
+amqp-client = "5.29.0"
 qpidbrokerj = "10.0.1"
 awaitility = "4.3.0"
 assertj = "3.27.7"
