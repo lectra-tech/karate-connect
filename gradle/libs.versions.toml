@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.3.20"
-karate = "1.5.2"
+karate = "2.0.0"
 amqp-client = "5.29.0"
 qpidbrokerj = "10.0.1"
 awaitility = "4.3.0"
