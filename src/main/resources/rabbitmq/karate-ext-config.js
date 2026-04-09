@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-function fn() {
+(function fn() {
     karate.log("Karate Ext Config Rabbitmq");
 
     const RabbitmqClient = Java.type("com.lectra.karate.connect.rabbitmq.RabbitmqClient");
@@ -36,9 +36,9 @@ function fn() {
         "Message": Message
     };
 
-    const generatedConfig = karate.read('classpath:rabbitmq/rabbitmq.js');
+    const generatedConfig = karate.read("classpath:rabbitmq/rabbitmq.js");
     return {
         ...defaultConfig,
         ...generatedConfig
     };
-}
+})();

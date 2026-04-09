@@ -27,14 +27,15 @@ Feature: topology
            "sasl.jaas.config": "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"user\" password=\"password\";",
            "karate.connect.consumer.group.id.prefix": "test-group-" } }
     * string bootstrapServers = karate.get("bootstrap.servers")
-    * string securityProtocol = karate.get("security.protocol", null)
-    * string saslMechanism = karate.get("sasl.mechanism", null)
-    * string saslJaasConfig = karate.get("sasl.jaas.config", null)
-    * string schemaRegistryUrl = karate.get("schema.registry.url", null)
-    * string basicAuthCredentialsSource = karate.get("basic.auth.credentials.source", null)
-    * string basicAuthUserInfo = karate.get("basic.auth.user.info", null)
-    * string consumerGroupIdPrefix = karate.get("karate.connect.consumer.group.id.prefix", null)
-    * def result = new kafka.KafkaClient(bootstrapServers, securityProtocol, saslMechanism, saslJaasConfig, schemaRegistryUrl, basicAuthCredentialsSource, basicAuthUserInfo, consumerGroupIdPrefix)
+    * def securityProtocol = karate.get("security.protocol", null)
+    * def saslMechanism = karate.get("sasl.mechanism", null)
+    * def saslJaasConfig = karate.get("sasl.jaas.config", null)
+    * def schemaRegistryUrl = karate.get("schema.registry.url", null)
+    * def basicAuthCredentialsSource = karate.get("basic.auth.credentials.source", null)
+    * def basicAuthUserInfo = karate.get("basic.auth.user.info", null)
+    * def consumerGroupIdPrefix = karate.get("karate.connect.consumer.group.id.prefix", null)
+    * def Clazz = kafka.KafkaClient
+    * def result = new Clazz(bootstrapServers, securityProtocol, saslMechanism, saslJaasConfig, schemaRegistryUrl, basicAuthCredentialsSource, basicAuthUserInfo, consumerGroupIdPrefix)
     * match result.getClass().getName() == "com.lectra.karate.connect.kafka.KafkaClient"
 
   @createTopic

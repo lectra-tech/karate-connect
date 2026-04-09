@@ -37,7 +37,7 @@ Feature: Test rest
     Then match result.data == expectedOutput
 
   Scenario: runSql - 30 lines
-    Given string selectStatement = karate.map([...Array(30).keys()], (index) => "SELECT 'user"+index+"' AS USER").join("\nUNION\n")
+    Given string selectStatement = Array.from({ length: 30 }, (_, index) => "SELECT 'user" + index + "' AS USER").join("\nUNION\n")
     When def result = snowflake.rest.runSql({...restConfig, statement: selectStatement})
     Then match result.status == "OK"
     And match (result.data.length) == 30
@@ -99,8 +99,9 @@ Feature: Test rest
     When json result = snowflake.rest.runSql({...restConfigLocal, statement: "CREATE OR REPLACE TABLE "+table+" (RECORD_METADATA VARIANT, RECORD_VALUE VARIANT)"})
     Then match result.status == "OK"
 
-    Given string recordMetadataFile = "record-metadata.json"
-    And string recordValueFile = "record-value.json"
+    Given string recordMetadataFile = karate.toAbsolutePath("record-metadata.json")
+    And string recordValueFile = karate.toAbsolutePath("record-value.json")
+
     When json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadataFile, recordValueFile})
     Then match result.status == "OK"
     And match result.message == "Statement executed successfully."
@@ -110,8 +111,8 @@ Feature: Test rest
     And match (result.data.length) == 1
     And json resultMetadata = result.data[0].RECORD_METADATA
     And json resultValue = result.data[0].RECORD_VALUE
-    And json recordMetadata = read(recordMetadataFile)
-    And json recordValue = read(recordValueFile)
+    And json recordMetadata = read("file:"+recordMetadataFile)
+    And json recordValue = read("file:"+recordValueFile)
     And match resultMetadata == recordMetadata
     And match resultValue == recordValue
 

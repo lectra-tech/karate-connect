@@ -22,10 +22,11 @@ Feature: message
   @produce
   Scenario: produce
   args: { kafkaClient: ..., topic: "...", keySubject: "...", valueSubject: "...", record: { key : "...", value: "...", headers:  { ... } } }
-    * def headers = karate.get("record.headers", {})
+    * def headersValue = record.headers
+    * def headersValue = karate.get("headersValue", {})
     * def keySubjectValue = karate.get("keySubject")
     * def valueSubjectValue = karate.get("valueSubject")
-    * def produceResult = kafkaClient.produce(topic, record.key, record.value, headers, keySubjectValue, valueSubjectValue)
+    * def produceResult = kafkaClient.produce(topic, record.key, record.value, headersValue, keySubjectValue, valueSubjectValue)
     * json recordMetadata = produceResult.toMap()
     * json result = ({ status: "OK", recordMetadata })
 

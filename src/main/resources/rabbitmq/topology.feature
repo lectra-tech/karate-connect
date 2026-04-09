@@ -22,7 +22,8 @@ Feature: topology
   @createClient
   Scenario: createClient
   args = { host: "<my-host>", port: "<my-port>", virtualHost: "<my-virtual-host>", username: "<my-username>", password: "<my-password>", ssl: true|false }
-    * def result = new rabbitmq.RabbitmqClient(host, port, virtualHost, username, password, ssl)
+    * def Clazz = rabbitmq.RabbitmqClient
+    * def result = new Clazz(host, port, virtualHost, username, password, ssl)
     * match result.getClass().getName() == "com.lectra.karate.connect.rabbitmq.RabbitmqClient"
 
   @exchange

@@ -16,13 +16,27 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-(function fn() {
-    karate.log("Karate Ext Config Kubernetes");
+package com.lectra.karate.connect.base
 
-    const defaultConfig = { };
-    const generatedConfig = karate.read("classpath:kubernetes/kubernetes.js");
-    return {
-        ...defaultConfig,
-        ...generatedConfig
-    };
-})();
+import java.util.concurrent.atomic.AtomicLong
+
+class Counter(initialValue: Long = 0) {
+
+    private val counter = AtomicLong(initialValue)
+
+    fun incrementAndGet(): Long {
+        return counter.incrementAndGet()
+    }
+
+    fun decrementAndGet(): Long {
+        return counter.decrementAndGet()
+    }
+
+    fun reset() {
+        counter.set(0)
+    }
+
+    fun get(): Long {
+        return counter.get()
+    }
+}

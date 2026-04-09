@@ -32,4 +32,5 @@ Feature: init
     * def String = Java.type('java.lang.String')
     * string keyStr = new String(key, "UTF-8")
     * karate.write(keyStr, "private-key.pem")
-    * karate.properties["snowflake.privateKeyPath"] = result
+    * def System = Java.type('java.lang.System')
+    * System.setProperty("snowflake.privateKeyPath", result)

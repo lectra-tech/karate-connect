@@ -23,7 +23,7 @@ Feature: cronJob
   Scenario: createJobDescription
   args = { namespace: "<my-namespace>", cronJobName: "<my-cron-job>", jobName: "<my-created-job-name>" }
     * def mockFile = karate.get("mockJobDescription")
-    * json result = (mockFile != null ? karate.read(mockJobDescription) : karate.exec("kubectl create job "+jobName+" --namespace="+namespace+" --from=cronjob/"+cronJobName+" --dry-run=client -o 'json'"))
+    * json result = (mockFile != null ? karate.read(mockJobDescription) : karate.exec("kubectl create job "+jobName+" --namespace="+namespace+" --from=cronjob/"+cronJobName+" --dry-run=client -o 'json'").trim())
 
   @ignore @executeJob
   Scenario: executeJob
@@ -31,7 +31,7 @@ Feature: cronJob
     * string jobDescriptionStr = jobDescription
     * string jobDescriptionFile = karate.write(jobDescriptionStr, ""+jobName+".json")
     * def mockFile = karate.get("mockJobDescription")
-    * string result = (mockFile != null ? "job.batch/"+jobName+" created" : karate.exec("kubectl apply -f "+jobDescriptionFile))
+    * string result = (mockFile != null ? "job.batch/"+jobName+" created" : karate.exec("kubectl apply -f "+jobDescriptionFile).trim())
     * match result == "job.batch/"+jobName+" created"
     * karate.exec("rm "+jobDescriptionFile)
 
@@ -39,7 +39,7 @@ Feature: cronJob
   Scenario: waitForJobCompletion
   args = { namespace: "<my-namespace>", jobName: "<my-created-job-name>", timeoutSecondsValue: ... }
     * def mockFile = karate.get("mockJobDescription")
-    * json result = (mockFile != null ? "job.batch/"+jobName+" condition met" : karate.exec("kubectl wait --for=condition=complete --timeout="+timeoutSecondsValue+"s --namespace="+namespace+" job/"+jobName))
+    * string result = (mockFile != null ? "job.batch/"+jobName+" condition met" : karate.exec("kubectl wait --for=condition=complete --timeout="+timeoutSecondsValue+"s --namespace="+namespace+" job/"+jobName).trim())
     * match result == "job.batch/"+jobName+" condition met"
 
   @ignore @deleteJob
@@ -62,7 +62,8 @@ Feature: cronJob
     # job description
     * karate.log("Create job "+jobName+"...")
     * json jobDescription = karate.call("@createJobDescription", ({ namespace, cronJobName, jobName })).result
-    * copy existingEnv = jobDescription.spec.template.spec.containers[0].env
+    * def firstContainer = jobDescription.spec.template.spec.containers[0]
+    * def existingEnv = firstContainer.env
     * if (envValue != null) jobDescription.spec.template.spec.containers[0].env = (existingEnv != null ? existingEnv : []).concat((envValue != null ? karate.map(karate.keysOf(env), (key) => ({ "name": key, "value": env[key] })) : []))
     * if (commandValue != null) jobDescription.spec.template.spec.containers[0].command = command
     * if (argsValue != null) jobDescription.spec.template.spec.containers[0].args = args

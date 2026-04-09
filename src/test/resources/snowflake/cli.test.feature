@@ -45,7 +45,7 @@ Feature: Test cli
   Scenario: runSql - 30 lines
     Given string schema = "PUBLIC"
     And json snowflakeConfigLocal = read("snowflake-config.json")
-    And string selectStatement = karate.map([...Array(30).keys()], (index) => "SELECT 'user"+index+"' AS USER").join("\nUNION\n")
+    And string selectStatement = Array.from({ length: 30 }, (_, index) => "SELECT 'user" + index + "' AS USER").join("\nUNION\n")
     When def result = snowflake.cli.runSql({statement: selectStatement, cliConfig, snowflakeConfig: snowflakeConfigLocal})
     Then match result.status == "OK"
     And match (result.output.length) == 30
@@ -58,7 +58,11 @@ Feature: Test cli
         return new String(Java.type('java.util.Base64').getUrlDecoder().decode(token.split('.')[1]));
       }
       """
-    When string jwt = snowflake.cli.generateJwt(cliConfig)
+    #When string jwt = snowflake.cli.generateJwt(cliConfig)
+    * def foo = karate.call('classpath:snowflake/cli.feature@generateJwt',cliConfig)
+    * karate.log("Result from generateJwt: ", foo)
+    * string jwt = foo.result
+    * karate.log("Generated JWT: ", jwt)
     Then match jwt == '#notnull'
     And def jwtParsed = parseJwt(jwt)
     And match jwtParsed == '#notnull'

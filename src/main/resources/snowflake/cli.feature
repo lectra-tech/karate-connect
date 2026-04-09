@@ -22,7 +22,7 @@ Feature: cli
   @generateJwt
   Scenario: generateJwt
   args = { account: "<my-account>", user: "<my-user>", privateKeyPath: "<path>/<filename>.pem", privateKeyPassphrase: "<passphrase>" }
-    * string result = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+privateKeyPassphrase+" snow connection generate-jwt --silent --temporary-connection --authenticator SNOWFLAKE_JWT --account "+account+" --user "+user+" --private-key-file "+privateKeyPath+" 2>/dev/null'")
+    * string result = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+privateKeyPassphrase+" snow connection generate-jwt --silent --temporary-connection --authenticator SNOWFLAKE_JWT --account "+account+" --user "+user+" --private-key-file "+privateKeyPath+" 2>/dev/null'").trim()
     * match result == "#regex .+\\..+\\..+"
 
   @ignore @putFileIntoTable
@@ -50,12 +50,10 @@ Feature: cli
     * json result = { "status": "WIP" }
     * def sqlFile = karate.write(statement, base.random.uuid() + ".sql")
     * def logFile = karate.write("", base.random.uuid() + ".log")
-    * def snowsqlExitCode = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+cliConfig.privateKeyPassphrase+" snow sql --temporary-connection --authenticator SNOWFLAKE_JWT --format JSON --account "+cliConfig.account+" --user "+cliConfig.user+" --role "+snowflakeConfig.role+" --warehouse "+snowflakeConfig.warehouse+" --database "+snowflakeConfig.database+" --schema "+snowflakeConfig.schema+" --filename "+sqlFile+" --private-key-path "+cliConfig.privateKeyPath+">"+logFile+"; echo \"exitCode=$?\"'")
-    * string log = karate.readAsString("file:"+logFile)
-    * if (!snowsqlExitCode.contains("exitCode=0")) karate.log(log)
+    * def commandResult = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+cliConfig.privateKeyPassphrase+" snow sql --temporary-connection --authenticator SNOWFLAKE_JWT --format JSON --account "+cliConfig.account+" --user "+cliConfig.user+" --role "+snowflakeConfig.role+" --warehouse "+snowflakeConfig.warehouse+" --database "+snowflakeConfig.database+" --schema "+snowflakeConfig.schema+" --filename "+sqlFile+" --private-key-path "+cliConfig.privateKeyPath+" > " + logFile + " 2>&1; echo \"exitCode=$?\"'").trim()
+    * def log = karate.read("file:"+logFile)
+    * result.status = (commandResult == "exitCode=0" ? "OK" : "FAILED")
+    * if (result.status == "OK") result.output = JSON.parse(log)
+    * if (result.status != "OK") result.output = log
     * karate.exec("rm -f "+sqlFile)
     * karate.exec("rm -f "+logFile)
-    * if (!snowsqlExitCode.contains("exitCode=0")) karate.fail(karate.scenario.name+" has failed")
-    * json logJson = log
-    * result.status = "OK"
-    * result.output = logJson

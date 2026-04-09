@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-function fn() {
+(function fn() {
     karate.log("Karate Ext Config Snowflake");
 
     karate.configure("retry", {count: 10, interval: 5000});
@@ -39,9 +39,9 @@ function fn() {
         "snowflakeConfigFromEnv": snowflakeConfigFromEnv
     };
 
-    const generatedConfig = karate.read('classpath:snowflake/snowflake.js');
+    const generatedConfig = karate.read("classpath:snowflake/snowflake.js");
     return {
         ...defaultConfig,
         ...generatedConfig
     };
-}
+})();

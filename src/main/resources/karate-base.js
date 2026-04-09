@@ -17,22 +17,14 @@
  * License-Filename: LICENSE
  */
 function fn() {
-    karate.log("Karate Base - Lectra configuration");
+    karate.log("Karate Base - Configuration");
 
     // common functions
-    const uuid = () => java.util.UUID.randomUUID().toString();
+    const uuid = () => karate.uuid();
     const currentTimeMillis = () => java.lang.System.currentTimeMillis();
     const offsetDateTimeNow = () => java.time.OffsetDateTime.now().toString();
-    const jsonToString = (obj) => Java.type("com.intuit.karate.JsonUtils").toJson(obj, false);
-    const readJsonLines = (file) => {
-        const rawLines = karate.readAsString(file);
-        return rawLines.split("\n").map(line => {
-            const file = karate.write(line, base.random.uuid()+".json");
-            const fileObject = karate.read("file:"+file);
-            karate.exec("rm -f " + file);
-            return (fileObject != null ? base.json.toString(fileObject) : "");
-        }).join("\n");
-    };
+    const jsonToString = (obj) => Java.type("io.karatelabs.common.Json").of(obj).value();
+    const readJsonLines = (file) => karate.readAsString(file);
     const assertWithEpsilon = (actual, expected, epsilon) => {
         const result = java.lang.Math.abs(actual - expected) <= epsilon;
         if (!result) {
@@ -45,6 +37,7 @@ function fn() {
         digest.update(data.getBytes("UTF-8"), 0, data.length);
         return Java.type("java.util.HexFormat").of().formatHex(digest.digest());
     };
+    const Counter = Java.type("com.lectra.karate.connect.base.Counter");
     let config = {
         "base" : {
             "random": {
@@ -68,6 +61,9 @@ function fn() {
                 "sha256": (data) => hash("SHA-256", data),
                 "sha384": (data) => hash("SHA-384", data),
                 "sha512": (data) => hash("SHA-512", data)
+            },
+            "number": {
+                "counter": (initialValue) => new Counter(initialValue)
             }
         }
     };
@@ -75,12 +71,14 @@ function fn() {
     // lectra extensions
     const extensions = karate.properties["extensions"];
     if (extensions) {
+        karate.log("Karate Base - Extensions to load: " + extensions);
         extensions.split(",").filter((ext) => ext !== "base").forEach(ext => {
                 const extTrim = ext.trim();
                 if (extTrim !== "") {
                     karate.log("Karate Base - Extension [" + extTrim + "]")
                     try {
-                        config[extTrim] = karate.read("classpath:" + extTrim + "/karate-ext-config.js")();
+                        config[extTrim] = karate.read("classpath:" + extTrim + "/karate-ext-config.js");
+                        karate.log("Karate Base - Extension [" + extTrim + "] loaded")
                     } catch (exception) {
                         karate.log("Karate Base - Extension [" + extTrim + "] - Not found", exception);
                     }
