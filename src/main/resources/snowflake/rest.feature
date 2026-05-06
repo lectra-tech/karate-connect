@@ -94,7 +94,7 @@ Feature: rest
   args = { "recordMetadata": {...}, "recordValue": {...} }
     * string rm = recordMetadata
     * string rv = recordValue
-    * string result = "('"+rm+"','"+rv+"')"
+    * string result = "($$"+rm+"$$,$$"+rv+"$$)"
 
   @insertRowIntoStagingTable
   Scenario: insertRowIntoStagingTable
