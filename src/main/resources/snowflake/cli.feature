@@ -19,27 +19,10 @@
 @ignore
 Feature: cli
 
-  @ignore @generateConfigToml
-  Scenario: generateConfigToml
-    # drop existing file
-    * string configTomlPath = karate.write("", "config.toml")
-    * karate.exec("rm -f "+configTomlPath)
-    # create a new one
-    * text configTomlContent =
-    """
-    [connections.default]
-    authenticator = "SNOWFLAKE_JWT"
-
-    """
-    * string configTomlPath = karate.write(configTomlContent, "config.toml")
-    * string chmodResult = karate.exec("chmod 0600 "+configTomlPath).trim()
-    * match chmodResult == ""
-    * json result = ({ configTomlPath, status: "OK" })
-
   @generateJwt
   Scenario: generateJwt
   args = { account: "<my-account>", user: "<my-user>", privateKeyPath: "<path>/<filename>.pem", privateKeyPassphrase: "<passphrase>" }
-    * string result = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+privateKeyPassphrase+" snow --config-file "+snowflake.configTomlPath+" connection generate-jwt --silent --account "+account+" --user "+user+" --private-key-file "+privateKeyPath+" 2>/dev/null'")
+    * string result = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+privateKeyPassphrase+" snow connection generate-jwt --silent --temporary-connection --authenticator SNOWFLAKE_JWT --account "+account+" --user "+user+" --private-key-file "+privateKeyPath+" 2>/dev/null'")
     * match result == "#regex .+\\..+\\..+"
 
   @ignore @putFileIntoTable
@@ -67,7 +50,7 @@ Feature: cli
     * json result = { "status": "WIP" }
     * def sqlFile = karate.write(statement, base.random.uuid() + ".sql")
     * def logFile = karate.write("", base.random.uuid() + ".log")
-    * def snowsqlExitCode = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+cliConfig.privateKeyPassphrase+" snow --config-file "+snowflake.configTomlPath+" sql --format JSON --account "+cliConfig.account+" --user "+cliConfig.user+" --role "+snowflakeConfig.role+" --warehouse "+snowflakeConfig.warehouse+" --database "+snowflakeConfig.database+" --schema "+snowflakeConfig.schema+" --filename "+sqlFile+" --private-key-path "+cliConfig.privateKeyPath+">"+logFile+"; echo \"exitCode=$?\"'")
+    * def snowsqlExitCode = karate.exec("bash -c 'PRIVATE_KEY_PASSPHRASE="+cliConfig.privateKeyPassphrase+" snow sql --temporary-connection --authenticator SNOWFLAKE_JWT --format JSON --account "+cliConfig.account+" --user "+cliConfig.user+" --role "+snowflakeConfig.role+" --warehouse "+snowflakeConfig.warehouse+" --database "+snowflakeConfig.database+" --schema "+snowflakeConfig.schema+" --filename "+sqlFile+" --private-key-path "+cliConfig.privateKeyPath+">"+logFile+"; echo \"exitCode=$?\"'")
     * string log = karate.readAsString("file:"+logFile)
     * if (!snowsqlExitCode.contains("exitCode=0")) karate.log(log)
     * karate.exec("rm -f "+sqlFile)

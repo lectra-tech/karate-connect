@@ -22,8 +22,6 @@ function fn() {
     karate.configure("retry", {count: 10, interval: 5000});
     karate.configure("readTimeout", 240000);
 
-    const configTomlPath = karate.callSingle("classpath:snowflake/cli.feature@generateConfigToml").result.configTomlPath;
-
     const cliConfigFromEnv = {
         account: java.lang.System.getenv('SNOWFLAKE_ACCOUNT'),
         user: java.lang.System.getenv('SNOWFLAKE_USER'),
@@ -37,7 +35,6 @@ function fn() {
         schema: java.lang.System.getenv('SNOWFLAKE_SCHEMA'),
     };
     const defaultConfig = {
-        "configTomlPath": configTomlPath,
         "cliConfigFromEnv": cliConfigFromEnv,
         "snowflakeConfigFromEnv": snowflakeConfigFromEnv
     };
