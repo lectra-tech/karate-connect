@@ -19,6 +19,7 @@ Stack: Kotlin/JVM (toolchain 21), Gradle Kotlin DSL, JUnit 5, Docker Compose, Py
 build.gradle.kts                       # build, fat JAR, extension JS code generation
 gradle/libs.versions.toml              # version catalog (all dependency versions live here)
 compose.yml + Dockerfile_*             # builder -> minimal -> python -> nominal / aks images
+devenv.nix / devenv.yaml               # optional Nix dev environment (devenv.sh)
 entrypoint.sh                          # Docker entrypoint (KARATE_EXTENSIONS -> -Dextensions)
 docs/headers/                          # license header templates + add-headers.sh
 src/main/kotlin/com/lectra/karate/connect/
@@ -51,6 +52,20 @@ docker compose build               # builds all 5 local images
   Use it whenever no Snowflake account is configured — Snowflake/dbt tests will otherwise fail.
 - Tests are always re-run (`outputs.upToDateWhen { false }`).
 - The project version comes from `git describe --tags` (grgit), so a shallow clone without tags yields `0.0.0`.
+
+### Optional: devenv
+
+[devenv](https://devenv.sh) provides the whole toolchain (JDK 21, Python CLIs, `kubectl`) without
+installing anything system-wide. It is opt-in and does not interfere with `.envrc`/`py_venv`.
+
+```bash
+devenv shell   # toolchain + kc-build / kc-build-all / kc-test / kc-docker-build / kc-headers
+devenv test    # fat JAR + tests on $TEST_EXTENSIONS
+```
+
+It uses a project-local `GRADLE_USER_HOME` (under `.devenv/state/`) and clears the extension
+environment variables (`KAFKA_*`, `RABBITMQ_*`, `SNOWFLAKE_*`), which the `configFromEnv` test
+scenarios require to be unset. Docker is not provided: `kc-docker-build` uses the host daemon.
 
 ## How extensions work (important)
 
