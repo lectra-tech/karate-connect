@@ -20,6 +20,7 @@ build.gradle.kts                       # build, fat JAR, extension JS code gener
 gradle/libs.versions.toml              # version catalog (all dependency versions live here)
 compose.yml + Dockerfile_*             # builder -> minimal -> python -> nominal / aks images
 devenv.nix / devenv.yaml               # optional Nix dev environment (devenv.sh)
+flake.nix + nix/*.nix                  # optional Nix module for consumers to run Karate tests
 entrypoint.sh                          # Docker entrypoint (KARATE_EXTENSIONS -> -Dextensions)
 docs/headers/                          # license header templates + add-headers.sh
 src/main/kotlin/com/lectra/karate/connect/
@@ -66,6 +67,36 @@ devenv test    # fat JAR + tests on $TEST_EXTENSIONS
 It uses a project-local `GRADLE_USER_HOME` (under `.devenv/state/`) and clears the extension
 environment variables (`KAFKA_*`, `RABBITMQ_*`, `SNOWFLAKE_*`), which the `configFromEnv` test
 scenarios require to be unset. Docker is not provided: `kc-docker-build` uses the host daemon.
+
+### Optional: `flake.nix` — reusable Nix module for consumers
+
+`flake.nix` + `nix/*.nix` let **other** Nix projects import karate-connect and run its Karate CLI
+against their own features, with every setting customizable (extensions, features path,
+`karate-config.js` location, tags, threads, output format, environment variables, JVM args). This is
+for consumers of karate-connect, not for building karate-connect itself (which is still done with
+Gradle as above).
+
+- The JAR is **fetched from a pinned GitHub Release** (`nix/default-jar.nix`, `fetchurl` +
+  content hash) — it is not rebuilt from source by Nix.
+- `nix/karate-run-options.nix` is the single shared option set (submodule); `nix/build-karate-run.nix`
+  turns one evaluated config into a `writeShellApplication` wrapper that invokes
+  `com.intuit.karate.Main` with `-cp "<jar>:<featuresPath>:<karateConfigDir>:<extraClasspath>"`
+  (not `-jar`, so that `classpath:...` reads inside features can find files on disk next to the
+  consumer's own feature/config directories).
+- Three adapters wrap that same core, so behavior never diverges:
+  - `flakeModules.default` — flake-parts module: `perSystem.karate-connect.runs.<name>` →
+    `packages`/`apps` named `karate-test-<name>`.
+  - `lib.mkKarateRun` — plain function (`lib.evalModules` under the hood) for consumers without
+    flake-parts.
+  - `devenvModules.default` — devenv module: `karate-connect.runs.<name>` → a `karate-<name>` script.
+- This repo dogfoods the module itself: `checks.kubernetes-smoke` (`nix flake check`) runs the
+  `kubernetes` extension against the existing **mocked** `cronJob.test.feature` — fully offline,
+  no `kubectl`/network needed — proving the fetch → wrapper → Karate run chain end-to-end.
+
+```bash
+nix run .#karate-test-kubernetes-smoke   # this repo's own dogfood run
+nix flake check                          # includes the same run as checks.kubernetes-smoke
+```
 
 ## How extensions work (important)
 
