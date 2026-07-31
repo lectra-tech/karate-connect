@@ -61,6 +61,30 @@ Commands::
 ** `karate-connect`
 ** `karate-connect:aks`
 
+=== Optional: devenv
+
+https://devenv.sh[devenv^] provides the whole build/test toolchain (JDK 21, Python CLIs, `kubectl`)
+without installing anything system-wide. It is opt-in and does not interfere with `.envrc`/`py_venv`.
+
+[source,bash]
+----
+devenv shell   # enter the dev environment
+devenv test    # fat JAR + tests on $TEST_EXTENSIONS, same check as CI
+----
+
+Once inside the shell, the following scripts are available :
+
+* `kc-build` : fat JAR + tests on `$TEST_EXTENSIONS` (defaults to `rabbitmq,kafka,kubernetes`)
+* `kc-build-all` : fat JAR + tests on every extension (Snowflake credentials required)
+* `kc-test` : tests only
+* `kc-docker-build` : build the Docker images (uses the host Docker daemon)
+* `kc-headers` : re-apply the license headers
+
+NOTE: Entering the shell clears any `KAFKA_*`/`RABBITMQ_*`/`SNOWFLAKE_*` environment variables
+inherited from your own shell, since the `configFromEnv` test scenarios require them to be unset.
+Snowflake and dbt tests are skipped unless `src/test/resources/snowflake/snowflake.properties`
+exists (see the Snowflake requirements above).
+
 == How to run `karate-connect` on your features
 
 === Docker usage
@@ -103,6 +127,252 @@ function fn() {
 [source,bash]
 ----
 java -Dextensions=<ext1>,<ext2>... -jar karate-connect-<version>-standalone.jar <karate_args>
+----
+
+== Using karate-connect from Nix (`flake.nix`)
+
+`flake.nix` (and the `nix/*.nix` files it imports) is a reusable Nix module for *other* Nix
+projects that want to run `karate-connect`'s Karate CLI against their own features, with every
+setting customizable (extensions, features path, `karate-config.js` location, tags, threads,
+report format, environment variables, JVM args, ...). This is for *consumers* of
+`karate-connect`, not for building `karate-connect` itself (that is still done with Gradle, see
+above).
+
+NOTE: The JAR used at runtime is fetched from a pinned GitHub Release, not rebuilt from source.
+
+Three adapters share the same option set (defined below), so their behavior never diverges :
+a https://flake.parts[flake-parts^] module (`flakeModules.default`), a plain function for
+consumers without flake-parts (`lib.mkKarateRun`), and a https://devenv.sh[devenv^] module
+(`devenvModules.default`).
+
+=== Options
+
+Every "run" (a `karate-connect.runs.<name>` entry, or the attribute set passed to
+`lib.mkKarateRun`) supports the following options :
+
+[cols="2,2,5", options="header"]
+|===
+| Option | Default | Description
+
+| `jar`
+| pinned release JAR
+| The karate-connect standalone JAR to run. Defaults to a pinned release fetched from GitHub
+Releases. Override with a custom build (e.g. a fork, or a locally built `-standalone.jar`) if
+needed.
+
+| `jdk`
+| `pkgs.temurin-bin-21`
+| JDK used to run the JAR. Defaults to JDK 21, matching karate-connect's own Gradle toolchain and
+Docker builder image.
+
+| `extensions`
+| `[ "base" ]`
+| List of extensions to load, passed as `-Dextensions=<ext1>,<ext2>,...`. One of `base`,
+`rabbitmq`, `kafka`, `snowflake`, `dbt`, `kubernetes`. `base` is always loaded by karate-connect
+itself regardless of this list.
+
+| `featuresPath`
+| `"features"`
+| Path to the feature file(s) or directory to run, resolved at runtime against the invoking
+shell's working directory (kept as a plain string, not a Nix path, so it is never copied into the
+store).
+
+| `karateConfigDir`
+| `null`
+| Directory containing a custom `karate-config.js`, passed as `-Dkarate.config.dir=<dir>`.
+Resolved at runtime against the invoking shell's working directory. Leave `null` to use Karate's
+default resolution (classpath / current directory).
+
+| `outputDir`
+| `"target/karate-reports"`
+| Report output directory, passed as `-o`.
+
+| `tags`
+| `null`
+| Tag expression filter, passed as `-t`. Example: `"@smoke"`.
+
+| `threads`
+| `1`
+| Parallel thread count, passed as `-T`.
+
+| `format`
+| `[ "junit:xml" "cucumber:json" ]`
+| Report formats, comma-joined and passed as `-f`.
+
+| `env`
+| `null`
+| Karate environment name, passed as `-e` (`karate.env`). Example: `"dev"`.
+
+| `name`
+| `null`
+| Scenario name filter, passed as `-n`.
+
+| `environmentVariables`
+| `{ }`
+| OS environment variables exported before running, e.g. the `RABBITMQ_*`/`KAFKA_*`/`SNOWFLAKE_*`
+variables read by karate-connect's extensions, or any variable a consumer's own
+`karate-config.js` relies on. Example: `{ RABBITMQ_HOST = "localhost"; KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"; }`.
+
+| `jvmArgs`
+| `[ ]`
+| Extra JVM arguments (e.g. heap size, custom system properties). Example: `[ "-Xmx2g" ]`.
+
+| `extraArgs`
+| `[ ]`
+| Escape hatch: extra arguments appended verbatim to the Karate CLI invocation.
+
+| `extraClasspath`
+| `[ ]`
+| Extra directories added to the JVM classpath alongside the JAR and `featuresPath`, resolved at
+runtime against the invoking shell's working directory. Needed when a feature reads a sibling
+resource via `classpath:...` (e.g. a mock JSON fixture) from outside `featuresPath`. Example:
+`[ "src/test/fixtures" ]`.
+|===
+
+=== Usage with flake-parts (`flakeModules.default`)
+
+Exposes `perSystem.karate-connect.runs.<name>`, producing a `packages`/`apps` pair named
+`karate-test-<name>`.
+
+.Full example `flake.nix`
+[source,nix]
+----
+{
+  description = "My project's Karate integration tests";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    karate-connect.url = "github:lectra-tech/karate-connect";
+  };
+
+  outputs =
+    inputs@{ flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+
+      imports = [ inputs.karate-connect.flakeModules.default ];
+
+      perSystem = { pkgs, ... }: {
+        karate-connect.runs.default = {
+          extensions = [ "rabbitmq" "kafka" ];
+          featuresPath = "src/test/features";
+          karateConfigDir = "src/test";
+          tags = "@smoke";
+          threads = 4;
+          environmentVariables = {
+            RABBITMQ_HOST = "localhost";
+            KAFKA_BOOTSTRAP_SERVERS = "localhost:9092";
+          };
+        };
+
+        # A second, independent run: e.g. a Kubernetes-only smoke test.
+        karate-connect.runs.kubernetes-smoke = {
+          extensions = [ "kubernetes" ];
+          featuresPath = "src/test/features/kubernetes";
+          tags = "@kubernetes";
+        };
+      };
+    };
+}
+----
+
+[source,bash]
+----
+nix run .#karate-test-default             # runs the "default" run
+nix run .#karate-test-kubernetes-smoke     # runs the "kubernetes-smoke" run
+nix flake check                            # if wired into `checks.*`, see this repo's own flake.nix
+----
+
+=== Usage without flake-parts (`lib.mkKarateRun`)
+
+A plain function for consumers who do not use flake-parts. It takes the same options plus
+`pkgs`/`lib`/`name`, and returns `{ package, app }`.
+
+[source,nix]
+----
+{
+  description = "My project's Karate integration tests";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    karate-connect.url = "github:lectra-tech/karate-connect";
+  };
+
+  outputs = { self, nixpkgs, karate-connect, ... }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
+      run = karate-connect.lib.mkKarateRun {
+        inherit pkgs;
+        name = "default";
+        extensions = [ "rabbitmq" "kafka" ];
+        featuresPath = "src/test/features";
+        tags = "@smoke";
+      };
+    in
+    {
+      packages.${system}.karate-test = run.package;
+      apps.${system}.karate-test = run.app;
+    };
+}
+----
+
+[source,bash]
+----
+nix run .#karate-test
+----
+
+=== Usage with devenv (`devenvModules.default`)
+
+Exposes `karate-connect.runs.<name>`, adding a `karate-<name>` script to the devenv shell.
+
+.Full example `devenv.yaml`
+[source,yaml]
+----
+inputs:
+  nixpkgs:
+    url: github:cachix/devenv-nixpkgs/rolling
+  karate-connect:
+    url: github:lectra-tech/karate-connect
+----
+
+.Full example `devenv.nix`
+[source,nix]
+----
+{ inputs, ... }:
+{
+  imports = [ inputs.karate-connect.devenvModules.default ];
+
+  karate-connect.runs.default = {
+    extensions = [ "rabbitmq" "kafka" ];
+    featuresPath = "src/test/features";
+    karateConfigDir = "src/test";
+    tags = "@smoke";
+    threads = 4;
+    environmentVariables = {
+      RABBITMQ_HOST = "localhost";
+      KAFKA_BOOTSTRAP_SERVERS = "localhost:9092";
+    };
+  };
+}
+----
+
+[source,bash]
+----
+devenv shell                    # enter the shell, exposes the `karate-default` script
+devenv shell -- karate-default  # run it non-interactively
+----
+
+=== Dogfooding
+
+This repo dogfoods the module against its own, fully-mocked `kubernetes` feature (no `kubectl`/network
+access needed) as `checks.kubernetes-smoke` :
+
+[source,bash]
+----
+nix run .#karate-test-kubernetes-smoke   # this repo's own dogfood run
+nix flake check                          # includes the same run as checks.kubernetes-smoke
 ----
 
 == Extensions
