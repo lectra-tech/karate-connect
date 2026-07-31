@@ -61,9 +61,11 @@ in
       example = "/features";
       description = ''
         Absolute path at which `featuresPath` should appear to the running
-        JVM, bind-mounted at run time via `bubblewrap` (`bwrap`) -- the same
-        remapping Docker usage does with `-v <features_path>:/features` (see
-        the Docker image's `VOLUME /features`).
+        JVM, bind-mounted at run time -- the same remapping Docker usage does
+        with `-v <features_path>:/features` (see the Docker image's
+        `VOLUME /features`). Implemented with `bubblewrap` (`bwrap`) on Linux,
+        or `bindfs` on Darwin (see below); evaluation fails with a clear error
+        on any other platform.
 
         Feature files are sometimes written to read fixtures via a hardcoded
         absolute path (e.g. `read('/features/foo.json')`) that only makes
@@ -74,15 +76,26 @@ in
         without copying anything into the Nix store.
 
         Leave `null` (the default) to run the JVM directly against
-        `featuresPath`, with no remapping. Only supported on Linux
-        (`bubblewrap` is not available on Darwin); evaluation fails with a
-        clear error if set on a non-Linux system.
+        `featuresPath`, with no remapping.
 
-        Must be a real subpath (e.g. `/features`), not `/` itself: the sandbox
-        works by building one fresh, writable root and re-binding `/nix`,
-        `/dev`, `/proc`, `/etc`, `/run`, `/tmp` and the caller's working
-        directory back onto it, so mounting something else directly onto `/`
-        would hide those.
+        On Linux: must be a real subpath (e.g. `/features`), not `/` itself --
+        the sandbox works by building one fresh, writable root and
+        re-binding `/nix`, `/dev`, `/proc`, `/etc`, `/run`, `/tmp` and the
+        caller's working directory back onto it, so mounting something else
+        directly onto `/` would hide those.
+
+        On Darwin: there is no namespace-based sandbox equivalent to
+        `bubblewrap`, so `bindfs` (a FUSE filesystem) is used instead, with
+        two consequences: (1) it requires `macFUSE` to be installed and
+        approved by the user once -- a system extension outside of Nix's
+        control, this option cannot install or consent to it for you; (2)
+        unlike the disposable Linux sandbox, `bindfs` mounts onto the *real*
+        filesystem, so `featuresMountPath` must already exist as a directory
+        the invoking user owns (e.g. created once with
+        `sudo mkdir -p /features && sudo chown "$(whoami)" /features`) --
+        evaluation succeeds either way, but the run fails at execution time
+        with a clear message if the directory is missing. This Darwin path is
+        less exercised than the Linux one; treat it as best-effort.
       '';
     };
 
@@ -104,8 +117,12 @@ in
       example = "/karate-config";
       description = ''
         Absolute path at which `karateConfigDir` should appear to the running
-        JVM, bind-mounted at run time via `bubblewrap` (`bwrap`) -- the same
-        remapping Docker usage does with `-v <my-specific-karate-config.js>:/karate-config.js`.
+        JVM, bind-mounted at run time -- the same remapping Docker usage does
+        with `-v <my-specific-karate-config.js>:/karate-config.js`.
+        Implemented the same way as `featuresMountPath` (`bubblewrap` on
+        Linux, `bindfs` on Darwin, with the same Darwin caveats: manual
+        `macFUSE` setup, and the target directory must already exist and be
+        owned by the invoking user).
 
         `karate-config.js` (or code it calls into) sometimes reads auxiliary
         files via a hardcoded absolute path that only makes sense inside that
@@ -118,11 +135,9 @@ in
         without copying anything into the Nix store.
 
         Leave `null` (the default) to run the JVM directly against
-        `karateConfigDir`, with no remapping. Only supported on Linux
-        (`bubblewrap` is not available on Darwin); evaluation fails with a
-        clear error if set on a non-Linux system. Must be a real subpath (e.g.
-        `/karate-config`), not `/` itself, for the same reason as
-        `featuresMountPath`.
+        `karateConfigDir`, with no remapping. Requires `karateConfigDir` to
+        also be set. Must be a real subpath (e.g. `/karate-config`), not `/`
+        itself, for the same reason as `featuresMountPath`.
       '';
     };
 

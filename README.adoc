@@ -179,17 +179,17 @@ store).
 
 | `featuresMountPath`
 | `null`
-| Absolute path at which `featuresPath` should appear to the running JVM, bind-mounted at run time
-via `bubblewrap` (`bwrap`) -- the same remapping Docker usage does with `-v <features_path>:/features`
-(see the Docker image's `VOLUME /features`). Useful when feature files were written assuming that
-Docker layout (e.g. reading fixtures from a hardcoded absolute path). Example: with
-`featuresPath = "it/features"` and `featuresMountPath = "/features"`, the host directory
-`it/features` (resolved against the invoking shell's working directory) is bind-mounted onto
-`/features` for the JVM process only -- no Nix store copy, no change to the real filesystem
-outside the wrapped process. Leave `null` (the default) to run directly against `featuresPath`,
-with no remapping. Only supported on Linux (`bubblewrap` is not available on Darwin); evaluation
-fails with a clear error if set on a non-Linux system. Must be a real subpath (e.g. `/features`),
-not `/` itself.
+| Absolute path at which `featuresPath` should appear to the running JVM, bind-mounted at run
+time -- the same remapping Docker usage does with `-v <features_path>:/features` (see the Docker
+image's `VOLUME /features`). Implemented with `bubblewrap` (`bwrap`) on Linux, or `bindfs` on
+Darwin (see the note below the table); evaluation fails with a clear error on any other platform.
+Useful when feature files were written assuming that Docker layout (e.g. reading fixtures from a
+hardcoded absolute path). Example: with `featuresPath = "it/features"` and
+`featuresMountPath = "/features"`, the host directory `it/features` (resolved against the
+invoking shell's working directory) is bind-mounted onto `/features` for the JVM process only --
+no Nix store copy, no change to the real filesystem outside the wrapped process. Leave `null`
+(the default) to run directly against `featuresPath`, with no remapping. Must be a real subpath
+(e.g. `/features`), not `/` itself.
 
 | `karateConfigDir`
 | `null`
@@ -200,18 +200,18 @@ default resolution (classpath / current directory).
 | `karateConfigMountPath`
 | `null`
 | Absolute path at which `karateConfigDir` should appear to the running JVM, bind-mounted at run
-time via `bubblewrap` (`bwrap`) -- the same remapping Docker usage does with
-`-v <my-specific-karate-config.js>:/karate-config.js`. `karate-config.js` (or code it calls into)
-sometimes reads auxiliary files via a hardcoded absolute path too, the same problem
-`featuresMountPath` solves for `featuresPath`. Example: with `karateConfigDir = "it/config"` and
-`karateConfigMountPath = "/karate-config"`, the host directory `it/config` is bind-mounted onto
-`/karate-config` for the JVM process only, and `-Dkarate.config.dir` is set to the mounted path.
-Requires `karateConfigDir` to also be set. Leave `null` (the default) to run directly against
-`karateConfigDir`, with no remapping. Only supported on Linux; evaluation fails with a clear error
-if set on a non-Linux system. Must be a real subpath (e.g. `/karate-config`), not `/` itself --
-`featuresMountPath` and `karateConfigMountPath` share the same sandbox, built as one fresh writable
-root with `/nix`, `/dev`, `/proc`, `/etc`, `/run`, `/tmp` and the caller's working directory
-re-bound onto it, so mounting directly onto `/` would hide those.
+time -- the same remapping Docker usage does with `-v <my-specific-karate-config.js>:/karate-config.js`.
+Implemented the same way as `featuresMountPath` (`bubblewrap` on Linux, `bindfs` on Darwin).
+`karate-config.js` (or code it calls into) sometimes reads auxiliary files via a hardcoded
+absolute path too, the same problem `featuresMountPath` solves for `featuresPath`. Example: with
+`karateConfigDir = "it/config"` and `karateConfigMountPath = "/karate-config"`, the host directory
+`it/config` is bind-mounted onto `/karate-config` for the JVM process only, and
+`-Dkarate.config.dir` is set to the mounted path. Requires `karateConfigDir` to also be set. Leave
+`null` (the default) to run directly against `karateConfigDir`, with no remapping. Must be a real
+subpath (e.g. `/karate-config`), not `/` itself -- `featuresMountPath` and `karateConfigMountPath`
+share the same sandbox on Linux, built as one fresh writable root with `/nix`, `/dev`, `/proc`,
+`/etc`, `/run`, `/tmp` and the caller's working directory re-bound onto it, so mounting directly
+onto `/` would hide those.
 
 | `outputDir`
 | `"target/karate-reports"`
@@ -258,6 +258,18 @@ runtime against the invoking shell's working directory. Needed when a feature re
 resource via `classpath:...` (e.g. a mock JSON fixture) from outside `featuresPath`. Example:
 `[ "src/test/fixtures" ]`.
 |===
+
+NOTE: `featuresMountPath` and `karateConfigMountPath` require either Linux (`bubblewrap`,
+zero-config) or macOS (`bindfs`). macOS has no equivalent of Linux user/mount namespaces, so on
+Darwin these options fall back to `bindfs`, a FUSE filesystem, with two consequences the Linux
+path doesn't have: (1) it requires https://github.com/macfuse/macfuse[macFUSE^] to be installed
+and approved by the user once -- a system extension outside of Nix's control; (2) unlike the
+disposable Linux sandbox, `bindfs` mounts onto the *real* filesystem, so the mount target (e.g.
+`/features`) must already exist as a directory the invoking user owns (create it once with
+`sudo mkdir -p /features && sudo chown "$(whoami)" /features`) -- the run fails with a clear
+message otherwise. The Darwin path is less exercised than the Linux one; treat it as best-effort.
+If neither is workable, running the Docker image directly (Docker Desktop already provides the
+equivalent Linux environment on macOS) remains the simplest option.
 
 === Usage with flake-parts (`flakeModules.default`)
 

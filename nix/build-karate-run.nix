@@ -70,39 +70,72 @@ let
 
   javaInvocation = ''java ${javaArgs} -cp "${classpath}" com.intuit.karate.Main ${karateArgs} "${effectiveFeaturesPath}"'';
 
-  # Binding a mount directly under the *real* root (`--dev-bind / /`) would
-  # require creating that mount point on the real host filesystem, which
-  # fails with a permission error for any path the caller can't already write
-  # to (e.g. `/features`). Instead, build a fresh, writable `tmpfs` root for
-  # the sandbox and re-bind only what the JVM actually needs onto it: `/nix`
-  # (the JDK/JAR themselves), `/dev`, `/proc`, the usual DNS/locale config
-  # under `/etc` (and `/run`, since `/etc/resolv.conf` often symlinks there),
-  # `/tmp`, and the caller's own working directory (so every other relative
-  # path -- `outputDir`, `extraClasspath`, report writes, ...) keeps resolving
+  # Linux: build a fresh, writable `tmpfs` root for the sandbox and re-bind
+  # only what the JVM actually needs onto it: `/nix` (the JDK/JAR
+  # themselves), `/dev`, `/proc`, the usual DNS/locale config under `/etc`
+  # (and `/run`, since `/etc/resolv.conf` often symlinks there), `/tmp`, and
+  # the caller's own working directory (so every other relative path --
+  # `outputDir`, `extraClasspath`, report writes, ...) keeps resolving
   # exactly as it would without the sandbox). Every requested mapping is then
-  # bind-mounted on top, in one invocation. The environment (network
+  # bind-mounted on top, in one `bubblewrap` invocation. Binding a mount
+  # directly under the *real* root (`--dev-bind / /`) would instead require
+  # creating that mount point on the real host filesystem, which fails with a
+  # permission error for any path the caller can't already write to (e.g.
+  # `/features`) -- hence the synthetic root. The environment (network
   # namespace included) is otherwise left untouched, so extensions talking to
   # `localhost`/real hosts (RabbitMQ, Kafka, ...) keep working unchanged.
-  #
-  # None of the target paths may be `/` itself: that would replace (and thus
-  # hide) the base binds above rather than nest under them.
+  linuxExecLine = ''
+    bwrapArgs=(--tmpfs / --ro-bind /nix /nix --dev /dev --proc /proc --bind /tmp /tmp)
+    for d in /etc /run /var/run; do
+      if [ -e "$d" ]; then
+        bwrapArgs+=(--ro-bind "$d" "$d")
+      fi
+    done
+    bwrapArgs+=(--bind "$PWD" "$PWD")
+    ${lib.concatMapStringsSep "\n    " (m: "bwrapArgs+=(--bind ${quoted m.hostPath} ${quoted m.mountPath})") mounts}
+    exec bwrap "''${bwrapArgs[@]}" -- ${javaInvocation}'';
+
+  # macOS has no equivalent of Linux user/mount namespaces, so `bubblewrap`
+  # cannot be used there. `bindfs` (a FUSE filesystem) is used instead to
+  # perform the same bind-mount, but with two consequences the Linux path
+  # doesn't have: (1) it requires `macFUSE` to be installed and approved by
+  # the user once, outside of Nix's control (a kernel/system extension, not
+  # something this wrapper can install or consent to on the user's behalf);
+  # (2) unlike the disposable Linux sandbox, `bindfs` mounts onto the *real*
+  # filesystem, so each `mountPath` must already exist as a directory the
+  # invoking user owns (e.g. created once with
+  # `sudo mkdir -p /features && sudo chown "$(whoami)" /features`) -- this
+  # wrapper only checks for that and fails with a clear message otherwise, it
+  # does not create top-level paths itself. Every mount is unmounted again
+  # once the JVM exits (success or failure), via an `EXIT` trap; `exec` is
+  # deliberately *not* used for the `java` invocation itself so that trap
+  # still gets to run cleanup afterwards.
+  darwinExecLine = ''
+    cleanup() {
+      ${lib.concatMapStringsSep "\n      " (m: ''umount ${quoted m.mountPath} >/dev/null 2>&1 || true'') (lib.reverseList mounts)}
+    }
+    trap cleanup EXIT
+
+    ${lib.concatMapStringsSep "\n    " (m: ''
+      if [ ! -d ${quoted m.mountPath} ]; then
+        echo "karate-connect: ${quoted m.mountPath} does not exist -- pre-create it once, e.g.:" >&2
+        echo "  sudo mkdir -p ${quoted m.mountPath} && sudo chown \"\$(whoami)\" ${quoted m.mountPath}" >&2
+        exit 1
+      fi
+      bindfs ${quoted m.hostPath} ${quoted m.mountPath}'') mounts}
+
+    ${javaInvocation}'';
+
   execLine =
-    if useMounts
-    then ''
-      bwrapArgs=(--tmpfs / --ro-bind /nix /nix --dev /dev --proc /proc --bind /tmp /tmp)
-      for d in /etc /run /var/run; do
-        if [ -e "$d" ]; then
-          bwrapArgs+=(--ro-bind "$d" "$d")
-        fi
-      done
-      bwrapArgs+=(--bind "$PWD" "$PWD")
-      ${lib.concatMapStringsSep "\n      " (m: "bwrapArgs+=(--bind ${quoted m.hostPath} ${quoted m.mountPath})") mounts}
-      exec bwrap "''${bwrapArgs[@]}" -- ${javaInvocation}''
-    else "exec ${javaInvocation}";
+    if !useMounts then "exec ${javaInvocation}"
+    else if pkgs.stdenv.isLinux then linuxExecLine
+    else darwinExecLine;
 
   wrapper = pkgs.writeShellApplication {
     name = scriptName;
-    runtimeInputs = [ cfg.jdk ] ++ lib.optional useMounts pkgs.bubblewrap;
+    runtimeInputs = [ cfg.jdk ]
+      ++ lib.optional (useMounts && pkgs.stdenv.isLinux) pkgs.bubblewrap
+      ++ lib.optional (useMounts && pkgs.stdenv.isDarwin) pkgs.bindfs;
     text = ''
       ${envExports}
 
@@ -112,8 +145,8 @@ let
 in
 lib.throwIf (lib.any (m: m.hostPath == null) mounts)
   "karate-connect run '${name}': ${lib.concatMapStringsSep ", " (m: m.option) (lib.filter (m: m.hostPath == null) mounts)} set without its corresponding host path option (featuresPath/karateConfigDir)"
-  (lib.throwIf (useMounts && !pkgs.stdenv.isLinux)
-    "karate-connect run '${name}': featuresMountPath/karateConfigMountPath require bubblewrap, which is only available on Linux"
+  (lib.throwIf (useMounts && !(pkgs.stdenv.isLinux || pkgs.stdenv.isDarwin))
+    "karate-connect run '${name}': featuresMountPath/karateConfigMountPath require bubblewrap (Linux) or bindfs/macFUSE (Darwin), neither of which is available on this platform"
     (lib.throwIf (lib.any (m: m.mountPath == "/") mounts)
       "karate-connect run '${name}': featuresMountPath/karateConfigMountPath must be a real subpath, not \"/\" itself"
       {
@@ -124,3 +157,4 @@ lib.throwIf (lib.any (m: m.hostPath == null) mounts)
           meta.description = "Run karate-connect Karate tests (run '${name}')";
         };
       }))
+
