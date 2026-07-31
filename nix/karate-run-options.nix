@@ -55,6 +55,31 @@ in
       '';
     };
 
+    featuresMountPath = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      example = "/features";
+      description = ''
+        Absolute path at which `featuresPath` should appear to the running
+        JVM, bind-mounted at run time via `bubblewrap` (`bwrap`) -- the same
+        remapping Docker usage does with `-v <features_path>:/features` (see
+        the Docker image's `VOLUME /features`).
+
+        Feature files are sometimes written to read fixtures via a hardcoded
+        absolute path (e.g. `read('/features/foo.json')`) that only makes
+        sense inside that Docker layout. Setting `featuresMountPath = "/features"`
+        with `featuresPath = "it/features"` makes `it/features` (resolved
+        against the invoking shell's working directory) appear as `/features`
+        to the JVM, without touching the real host `/features` (if any) and
+        without copying anything into the Nix store.
+
+        Leave `null` (the default) to run the JVM directly against
+        `featuresPath`, with no remapping. Only supported on Linux
+        (`bubblewrap` is not available on Darwin); evaluation fails with a
+        clear error if set on a non-Linux system.
+      '';
+    };
+
     karateConfigDir = mkOption {
       type = types.nullOr types.str;
       default = null;

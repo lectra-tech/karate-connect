@@ -23,12 +23,24 @@ let
 
   quoted = s: lib.escapeShellArg s;
 
+  # `cfg.featuresMountPath` mirrors Docker's `-v <features_path>:/features`:
+  # some feature files read fixtures via a hardcoded absolute path that only
+  # makes sense inside that Docker layout (e.g. `read('/features/foo.json')`).
+  # When set, `bubblewrap` bind-mounts `cfg.featuresPath` onto that absolute
+  # path for the JVM's mount namespace only -- no Nix store copy, no change
+  # to the real filesystem outside the wrapped process.
+  useFeaturesMount = cfg.featuresMountPath != null;
+
+  # `featuresPath` as seen by the JVM: either the plain path, or the absolute
+  # mount point it has been bind-mounted onto.
+  effectiveFeaturesPath = if useFeaturesMount then cfg.featuresMountPath else cfg.featuresPath;
+
   envExports = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (k: v: "export ${k}=${quoted v}") cfg.environmentVariables
   );
 
   classpathEntries = lib.unique (
-    [ "${cfg.jar}" cfg.featuresPath ]
+    [ "${cfg.jar}" effectiveFeaturesPath ]
     ++ lib.optional (cfg.karateConfigDir != null) cfg.karateConfigDir
     ++ cfg.extraClasspath
   );
@@ -50,16 +62,47 @@ let
     ++ map quoted cfg.extraArgs
   );
 
+  javaInvocation = ''java ${javaArgs} -cp "${classpath}" com.intuit.karate.Main ${karateArgs} "${effectiveFeaturesPath}"'';
+
+  # Binding `featuresMountPath` directly under the *real* root (`--dev-bind /
+  # /`) would require creating that mount point on the real host filesystem,
+  # which fails with a permission error for any path the caller can't already
+  # write to (e.g. `/features`). Instead, build a fresh, writable `tmpfs` root
+  # for the sandbox and re-bind only what the JVM actually needs onto it:
+  # `/nix` (the JDK/JAR themselves), `/dev`, `/proc`, the usual DNS/locale
+  # config under `/etc` (and `/run`, since `/etc/resolv.conf` often symlinks
+  # there), `/tmp`, and the caller's own working directory (so every other
+  # relative path -- `outputDir`, `karateConfigDir`, `extraClasspath`, report
+  # writes, ...) keeps resolving exactly as it would without the sandbox).
+  # The environment (network namespace included) is otherwise left untouched,
+  # so extensions talking to `localhost`/real hosts (RabbitMQ, Kafka, ...)
+  # keep working unchanged.
+  execLine =
+    if useFeaturesMount
+    then ''
+      bwrapArgs=(--tmpfs / --ro-bind /nix /nix --dev /dev --proc /proc --bind /tmp /tmp)
+      for d in /etc /run /var/run; do
+        if [ -e "$d" ]; then
+          bwrapArgs+=(--ro-bind "$d" "$d")
+        fi
+      done
+      bwrapArgs+=(--bind "$PWD" "$PWD")
+      bwrapArgs+=(--bind ${quoted cfg.featuresPath} ${quoted cfg.featuresMountPath})
+      exec bwrap "''${bwrapArgs[@]}" -- ${javaInvocation}''
+    else "exec ${javaInvocation}";
+
   wrapper = pkgs.writeShellApplication {
     name = scriptName;
-    runtimeInputs = [ cfg.jdk ];
+    runtimeInputs = [ cfg.jdk ] ++ lib.optional useFeaturesMount pkgs.bubblewrap;
     text = ''
       ${envExports}
 
-      exec java ${javaArgs} -cp "${classpath}" com.intuit.karate.Main ${karateArgs} "${cfg.featuresPath}"
+      ${execLine}
     '';
   };
 in
+lib.throwIf (useFeaturesMount && !pkgs.stdenv.isLinux)
+  "karate-connect run '${name}': featuresMountPath requires bubblewrap, which is only available on Linux"
 {
   package = wrapper;
   app = {

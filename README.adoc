@@ -177,6 +177,19 @@ itself regardless of this list.
 shell's working directory (kept as a plain string, not a Nix path, so it is never copied into the
 store).
 
+| `featuresMountPath`
+| `null`
+| Absolute path at which `featuresPath` should appear to the running JVM, bind-mounted at run time
+via `bubblewrap` (`bwrap`) -- the same remapping Docker usage does with `-v <features_path>:/features`
+(see the Docker image's `VOLUME /features`). Useful when feature files were written assuming that
+Docker layout (e.g. reading fixtures from a hardcoded absolute path). Example: with
+`featuresPath = "it/features"` and `featuresMountPath = "/features"`, the host directory
+`it/features` (resolved against the invoking shell's working directory) is bind-mounted onto
+`/features` for the JVM process only -- no Nix store copy, no change to the real filesystem
+outside the wrapped process. Leave `null` (the default) to run directly against `featuresPath`,
+with no remapping. Only supported on Linux (`bubblewrap` is not available on Darwin); evaluation
+fails with a clear error if set on a non-Linux system.
+
 | `karateConfigDir`
 | `null`
 | Directory containing a custom `karate-config.js`, passed as `-Dkarate.config.dir=<dir>`.
@@ -272,6 +285,16 @@ Exposes `perSystem.karate-connect.runs.<name>`, producing a `packages`/`apps` pa
           featuresPath = "src/test/features/kubernetes";
           tags = "@kubernetes";
         };
+
+        # A third run: features written for the Docker layout, reading
+        # fixtures from a hardcoded `/features/...` path. `it/features` (on
+        # disk, next to this flake.nix) is bind-mounted onto `/features` for
+        # the JVM only, mirroring `docker run -v it/features:/features ...`.
+        karate-connect.runs.docker-style = {
+          extensions = [ "rabbitmq" ];
+          featuresPath = "it/features";
+          featuresMountPath = "/features";
+        };
       };
     };
 }
@@ -281,6 +304,7 @@ Exposes `perSystem.karate-connect.runs.<name>`, producing a `packages`/`apps` pa
 ----
 nix run .#karate-test-default             # runs the "default" run
 nix run .#karate-test-kubernetes-smoke     # runs the "kubernetes-smoke" run
+nix run .#karate-test-docker-style         # runs the "docker-style" run, /features bind-mounted
 nix flake check                            # if wired into `checks.*`, see this repo's own flake.nix
 ----
 
@@ -355,13 +379,24 @@ inputs:
       KAFKA_BOOTSTRAP_SERVERS = "localhost:9092";
     };
   };
+
+  # Features written for the Docker layout, reading fixtures from a
+  # hardcoded `/features/...` path. `it/features` (on disk, next to this
+  # devenv.nix) is bind-mounted onto `/features` for the JVM only, mirroring
+  # `docker run -v it/features:/features ...`.
+  karate-connect.runs.docker-style = {
+    extensions = [ "rabbitmq" ];
+    featuresPath = "it/features";
+    featuresMountPath = "/features";
+  };
 }
 ----
 
 [source,bash]
 ----
-devenv shell                    # enter the shell, exposes the `karate-default` script
-devenv shell -- karate-default  # run it non-interactively
+devenv shell                        # enter the shell, exposes karate-default & karate-docker-style
+devenv shell -- karate-default      # run the "default" run non-interactively
+devenv shell -- karate-docker-style # run the "docker-style" run, /features bind-mounted
 ----
 
 === Dogfooding
