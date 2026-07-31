@@ -68,7 +68,24 @@ let
     ++ map quoted cfg.extraArgs
   );
 
-  javaInvocation = ''java ${javaArgs} -cp "${classpath}" com.intuit.karate.Main ${karateArgs} "${effectiveFeaturesPath}"'';
+  # Mirrors the Docker image's own `entrypoint.sh` (`java ... $@`, with
+  # `CMD ["features"]` as the default): calling the wrapper with no arguments
+  # runs the configured `featuresPath` (or its mount-mapped equivalent), and
+  # calling it with one or more arguments (e.g. `karate-default
+  # src/test/features/foo.feature`) replaces it entirely -- only the given
+  # path(s) run, exactly like `docker run <image> <args>` overrides `CMD`
+  # rather than adding to it. `classpath` is unaffected either way, so
+  # `classpath:...`-relative resource resolution keeps working even when a
+  # single feature file outside `featuresPath` is targeted.
+  featureArgsSnippet = ''
+    if [ "$#" -gt 0 ]; then
+      featureArgs=("$@")
+    else
+      featureArgs=(${quoted effectiveFeaturesPath})
+    fi
+  '';
+
+  javaInvocation = ''java ${javaArgs} -cp "${classpath}" com.intuit.karate.Main ${karateArgs} "''${featureArgs[@]}"'';
 
   # Linux: build a fresh, writable `tmpfs` root for the sandbox and re-bind
   # only what the JVM actually needs onto it: `/nix` (the JDK/JAR
@@ -139,6 +156,7 @@ let
     text = ''
       ${envExports}
 
+      ${featureArgsSnippet}
       ${execLine}
     '';
   };

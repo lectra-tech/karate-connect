@@ -338,6 +338,10 @@ nix run .#karate-test-default             # runs the "default" run
 nix run .#karate-test-kubernetes-smoke     # runs the "kubernetes-smoke" run
 nix run .#karate-test-docker-style         # runs the "docker-style" run, /features bind-mounted
 nix flake check                            # if wired into `checks.*`, see this repo's own flake.nix
+
+# Any argument passed after `--` replaces `featuresPath` for that invocation only,
+# exactly like `docker run <image> <karate_args>` overrides the image's default `CMD`:
+nix run .#karate-test-default -- src/test/features/foo.feature
 ----
 
 === Usage without flake-parts (`lib.mkKarateRun`)
@@ -432,6 +436,10 @@ inputs:
 devenv shell                        # enter the shell, exposes karate-default & karate-docker-style
 devenv shell -- karate-default      # run the "default" run non-interactively
 devenv shell -- karate-docker-style # run the "docker-style" run, /features bind-mounted
+
+# Any argument passed to the script replaces `featuresPath` for that invocation only,
+# exactly like `docker run <image> <karate_args>` overrides the image's default `CMD`:
+devenv shell -- karate-default src/test/features/foo.feature
 ----
 
 === Dogfooding
