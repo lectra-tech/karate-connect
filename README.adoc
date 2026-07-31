@@ -188,13 +188,30 @@ Docker layout (e.g. reading fixtures from a hardcoded absolute path). Example: w
 `/features` for the JVM process only -- no Nix store copy, no change to the real filesystem
 outside the wrapped process. Leave `null` (the default) to run directly against `featuresPath`,
 with no remapping. Only supported on Linux (`bubblewrap` is not available on Darwin); evaluation
-fails with a clear error if set on a non-Linux system.
+fails with a clear error if set on a non-Linux system. Must be a real subpath (e.g. `/features`),
+not `/` itself.
 
 | `karateConfigDir`
 | `null`
 | Directory containing a custom `karate-config.js`, passed as `-Dkarate.config.dir=<dir>`.
 Resolved at runtime against the invoking shell's working directory. Leave `null` to use Karate's
 default resolution (classpath / current directory).
+
+| `karateConfigMountPath`
+| `null`
+| Absolute path at which `karateConfigDir` should appear to the running JVM, bind-mounted at run
+time via `bubblewrap` (`bwrap`) -- the same remapping Docker usage does with
+`-v <my-specific-karate-config.js>:/karate-config.js`. `karate-config.js` (or code it calls into)
+sometimes reads auxiliary files via a hardcoded absolute path too, the same problem
+`featuresMountPath` solves for `featuresPath`. Example: with `karateConfigDir = "it/config"` and
+`karateConfigMountPath = "/karate-config"`, the host directory `it/config` is bind-mounted onto
+`/karate-config` for the JVM process only, and `-Dkarate.config.dir` is set to the mounted path.
+Requires `karateConfigDir` to also be set. Leave `null` (the default) to run directly against
+`karateConfigDir`, with no remapping. Only supported on Linux; evaluation fails with a clear error
+if set on a non-Linux system. Must be a real subpath (e.g. `/karate-config`), not `/` itself --
+`featuresMountPath` and `karateConfigMountPath` share the same sandbox, built as one fresh writable
+root with `/nix`, `/dev`, `/proc`, `/etc`, `/run`, `/tmp` and the caller's working directory
+re-bound onto it, so mounting directly onto `/` would hide those.
 
 | `outputDir`
 | `"target/karate-reports"`
@@ -286,14 +303,17 @@ Exposes `perSystem.karate-connect.runs.<name>`, producing a `packages`/`apps` pa
           tags = "@kubernetes";
         };
 
-        # A third run: features written for the Docker layout, reading
-        # fixtures from a hardcoded `/features/...` path. `it/features` (on
-        # disk, next to this flake.nix) is bind-mounted onto `/features` for
-        # the JVM only, mirroring `docker run -v it/features:/features ...`.
+        # A third run: features and config written for the Docker layout,
+        # reading fixtures/config from hardcoded absolute paths. `it/features`
+        # and `it/config` (on disk, next to this flake.nix) are bind-mounted
+        # onto `/features` and `/karate-config` for the JVM only, mirroring
+        # `docker run -v it/features:/features -v it/config/karate-config.js:/karate-config.js ...`.
         karate-connect.runs.docker-style = {
           extensions = [ "rabbitmq" ];
           featuresPath = "it/features";
           featuresMountPath = "/features";
+          karateConfigDir = "it/config";
+          karateConfigMountPath = "/karate-config";
         };
       };
     };
@@ -380,14 +400,17 @@ inputs:
     };
   };
 
-  # Features written for the Docker layout, reading fixtures from a
-  # hardcoded `/features/...` path. `it/features` (on disk, next to this
-  # devenv.nix) is bind-mounted onto `/features` for the JVM only, mirroring
-  # `docker run -v it/features:/features ...`.
+  # Features and config written for the Docker layout, reading fixtures/config
+  # from hardcoded absolute paths. `it/features` and `it/config` (on disk,
+  # next to this devenv.nix) are bind-mounted onto `/features` and
+  # `/karate-config` for the JVM only, mirroring
+  # `docker run -v it/features:/features -v it/config/karate-config.js:/karate-config.js ...`.
   karate-connect.runs.docker-style = {
     extensions = [ "rabbitmq" ];
     featuresPath = "it/features";
     featuresMountPath = "/features";
+    karateConfigDir = "it/config";
+    karateConfigMountPath = "/karate-config";
   };
 }
 ----

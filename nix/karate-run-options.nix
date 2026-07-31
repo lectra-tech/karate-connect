@@ -77,6 +77,12 @@ in
         `featuresPath`, with no remapping. Only supported on Linux
         (`bubblewrap` is not available on Darwin); evaluation fails with a
         clear error if set on a non-Linux system.
+
+        Must be a real subpath (e.g. `/features`), not `/` itself: the sandbox
+        works by building one fresh, writable root and re-binding `/nix`,
+        `/dev`, `/proc`, `/etc`, `/run`, `/tmp` and the caller's working
+        directory back onto it, so mounting something else directly onto `/`
+        would hide those.
       '';
     };
 
@@ -89,6 +95,34 @@ in
         `-Dkarate.config.dir=<dir>`. Resolved at runtime against the invoking
         shell's working directory. Leave `null` to use Karate's default
         resolution (classpath / current directory).
+      '';
+    };
+
+    karateConfigMountPath = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      example = "/karate-config";
+      description = ''
+        Absolute path at which `karateConfigDir` should appear to the running
+        JVM, bind-mounted at run time via `bubblewrap` (`bwrap`) -- the same
+        remapping Docker usage does with `-v <my-specific-karate-config.js>:/karate-config.js`.
+
+        `karate-config.js` (or code it calls into) sometimes reads auxiliary
+        files via a hardcoded absolute path that only makes sense inside that
+        Docker layout, the same problem `featuresMountPath` solves for
+        `featuresPath`. Setting `karateConfigMountPath = "/karate-config"`
+        with `karateConfigDir = "it/config"` makes `it/config` (resolved
+        against the invoking shell's working directory) appear as
+        `/karate-config` to the JVM -- `-Dkarate.config.dir` is then set to
+        the mounted path -- without touching the real host filesystem and
+        without copying anything into the Nix store.
+
+        Leave `null` (the default) to run the JVM directly against
+        `karateConfigDir`, with no remapping. Only supported on Linux
+        (`bubblewrap` is not available on Darwin); evaluation fails with a
+        clear error if set on a non-Linux system. Must be a real subpath (e.g.
+        `/karate-config`), not `/` itself, for the same reason as
+        `featuresMountPath`.
       '';
     };
 
