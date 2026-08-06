@@ -37,8 +37,8 @@ in
     };
 
     extensions = mkOption {
-      type = types.listOf (types.enum [ "base" "rabbitmq" "kafka" "snowflake" "dbt" "kubernetes" ]);
-      default = [ "base" ];
+      type = types.listOf (types.enum [ "rabbitmq" "kafka" "snowflake" "dbt" "kubernetes" ]);
+      default = [ ];
       description = ''
         Extensions to load, passed as `-Dextensions=<ext1>,<ext2>,...`. `base`
         is always loaded by karate-connect itself regardless of this list.
