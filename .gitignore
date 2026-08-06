@@ -44,6 +44,11 @@ target
 # Python
 py_venv
 
+# devenv / direnv
+.devenv*
+devenv.local.nix
+.direnv
+
 # Snowflake
 snowflake.properties
 
