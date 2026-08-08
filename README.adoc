@@ -43,7 +43,7 @@ Requirements::
 * JDK 21+
 * Kotlin
 * Gradle
-* Docker and Docker Compose
+* Docker
 * Python 3.x & pip
 
 Snowflake requirements::
@@ -56,7 +56,7 @@ Commands::
 * `source .envrc` to install Python packages in a virtual environment (or `direnv allow` if you prefer the great https://direnv.net/[`direnv`^] tool)
 * `./gradlew build` to build the fat JAR with all tests
 * `./gradlew build -DtestExtensions=...` to build the fat JAR with only Karate tests on the given extensions (useful if you do not have a Snowflake account)
-* `docker compose build` to build the 3 Docker images locally :
+* `docker buildx bake` to build the 3 Docker images locally :
 ** `karate-connect:minimal`
 ** `karate-connect`
 ** `karate-connect:aks`
@@ -475,6 +475,7 @@ Some common functions added to the Karate DSL
 * string res = base.hash.sha256("hello world")                # res='b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9'
 * string res = base.hash.sha384("hello world")                # res='5eb63bbbfdbd8e75a67f29f701a4e040385e2e23986303ea10239211af907fcbb83578b3e417cb71ce646efd0819dd8c088de1bde01eeed093cb22bb8f5acdc3'
 * string res = base.hash.sha512("hello world")                # res='309ecc489c12d6eb4cc40f50c902f2b4d0ed77ee511a7c7a9bcd3ca86d4cd86f989dd35bc5ff499670da34255b45b0cfd830e81f605dcf7dc5542e93ae9cd76f'
+* def c      = base.number.counter(6).incrementAndGet()       # c=7, initial value = 0 by default, other operations: decrementAndGet(), get(), reset()
 ----
 
 NOTE: This extension is loaded by default.
@@ -927,7 +928,7 @@ NOTE: Limitations for SQL statement through CLI is not yet analyzed.
 * json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadata: {...}, recordValue: {...}})
 * match result.status == "OK"
 # Single row from files
-* json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadataFile: "<file-metadata-path>", recordValueFile: "<file-value-path>"})
+* json result = snowflake.rest.insertRowIntoStagingTable({...restConfigLocal, table, recordMetadataFile: "<file-metadata-absolute-path>", recordValueFile: "<file-value-absolute-path>"})
 * match result.status == "OK"
 # Many rows
 * json result = snowflake.rest.insertRowsIntoStagingTable({...restConfigLocal, table, records: [ {recordMetadata: {...}, recordValue: {...}}, ... ]})

@@ -1,4 +1,4 @@
-import com.intuit.karate.core.Feature
+import io.karatelabs.gherkin.Feature
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.io.path.nameWithoutExtension
@@ -33,13 +33,15 @@ dependencies {
     implementation(libs.kafka.json.schema.serializer)
     implementation(libs.kafka.protobuf.serializer)
     runtimeClasspath(libs.karate.core)
-    testImplementation(libs.karate.junit5)
+    runtimeClasspath(libs.logback.classic)
+    testImplementation(libs.karate.junit6)
+    testImplementation(libs.junit.jupiter)
     testImplementation(libs.qpid.broker.core)
     testImplementation(libs.qpid.broker.plugins.amqp)
     testImplementation(libs.assertj.core)
     testRuntimeOnly(libs.qpid.broker.plugins.memory.store)
     testImplementation(libs.embedded.kafka.schema.registry)
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 buildscript {
@@ -82,12 +84,16 @@ tasks {
                 )
             )
         }
-        val sourcesMain = sourceSets.main.get()
-        val contents =
-            configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) } +
-                    sourcesMain.output
-        from(contents)
-        exclude("logback-fatjar.xml", "logback-nofile.xml", "LICENSE*", "META-INF/LICENSE*", "META-INF/NOTICE*")
+        val runtimeContents = configurations.runtimeClasspath.get().map {
+            if (it.isDirectory) {
+                fileTree(it) { exclude("logback.xml") }
+            } else {
+                zipTree(it).matching { exclude("logback.xml") }
+            }
+        }
+        from(runtimeContents)
+        from(sourceSets.main.get().output)
+        exclude("LICENSE*", "META-INF/LICENSE*", "META-INF/NOTICE*")
     }
     build {
         dependsOn(fatJar)
@@ -98,12 +104,16 @@ tasks {
         val extensions = Files.walk(Paths.get(resourcesDirPath), 1)
             .filter { Files.isDirectory(it) && it.pathString != resourcesDirPath }.map { it.fileName.toString() }
             .toList()
+        // Capture as plain strings for configuration cache compatibility
+        val resourcesDirPathStr: String = resourcesDirPath
+        val outputResourcesDirPathStr: String = outputResourcesDirPath
+        val extensionsList: List<String> = extensions
         doFirst {
-            mkdir(outputResourcesDirPath)
+            Paths.get(outputResourcesDirPathStr).toFile().mkdirs()
         }
         doLast {
-            extensions.forEach { extension ->
-                val out = Files.walk(Paths.get("$resourcesDirPath/$extension"), 1)
+            extensionsList.forEach { extension ->
+                val out = Files.walk(Paths.get("$resourcesDirPathStr/$extension"), 1)
                     .filter { !Files.isDirectory(it) && it.pathString.endsWith(".feature") }.toList()
                     .map { featurePath ->
                         val feature = Feature.read(featurePath.pathString)
@@ -116,8 +126,8 @@ tasks {
                                 .joinToString(separator = ",\n\t\t") { """"${it.name}": (args) => karate.call('classpath:$extension/${featurePath.fileName}@${it.name}', args).result""" }
                             "\t\"${featurePath.fileName.nameWithoutExtension}\": {\n\t\t$text\n\t}"
                         }
-                    }.filter { it.isNotBlank() }.joinToString(prefix = "{\n", separator = ",\n", postfix = "\n}")
-                file("$outputResourcesDirPath/$extension/$extension.js").writeText(out)
+                    }.filter { it.isNotBlank() }.joinToString(prefix = "return {\n", separator = ",\n", postfix = "\n};")
+                Paths.get("$outputResourcesDirPathStr/$extension/$extension.js").toFile().also { it.parentFile.mkdirs() }.writeText(out)
             }
         }
     }

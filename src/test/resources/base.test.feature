@@ -19,6 +19,28 @@
 @base
 Feature: Test base
 
+  Scenario: number.counter
+    Given def counter = base.number.counter(0)
+    When def value0 = counter.get()
+    Then match value0 == 0
+
+    When def value1 = counter.incrementAndGet()
+    Then match value1 == 1
+
+    When def value2 = counter.incrementAndGet()
+    Then match value2 == 2
+
+    When def value3 = counter.decrementAndGet()
+    Then match value3 == 1
+
+    Given def counter2 = base.number.counter(2)
+    When def value4 = counter2.get()
+    Then match value4 == 2
+
+    When counter2.reset()
+    And def value5 = counter2.get()
+    Then match value5 == 0
+
   Scenario: random.uuid
     When string generatedUUID = base.random.uuid()
     Then match generatedUUID == '#uuid'
@@ -28,16 +50,17 @@ Feature: Test base
     Then match result == '#number ? _ > 0'
 
   Scenario: bug JSON.stringify
-    https://github.com/karatelabs/karate/issues/2581
+    https://github.com/karatelabs/karate/issues/2581 => FIXED in v2.0.2
     Given json myJson = { "myField":  0.10738338032073512 }
     When string value = JSON.stringify(myJson)
     And string value2 = (myJson)
-    Then match value == '{"myField":{}}'
-    Then match value2 == '{"myField":0.10738338032073512}'
+    #Then match value == '{"myField":{}}' # PREVIOUSLY A BUG
+    Then match value == '{"myField":0.10738338032073512}'
+    And match value2 == '{"myField":0.10738338032073512}'
 
   Scenario: json.toString
     Given json myJson = { "myField":  0.10738338032073512 }
-    When def value = base.json.toString(myJson)
+    When string value = base.json.toString(myJson)
     Then match value == '{"myField":0.10738338032073512}'
 
   Scenario: json.readLines
@@ -48,9 +71,10 @@ Feature: Test base
     And string jsonContent = base.json.readLines("files/test-json-lines-token.json")
     And text expected =
       """
-      {"FOO":1,"BAR":"valueBar1","TEST":"prefix-valueTest-suffix","DATE":"2020-01-01T00:00Z"}
-      {"FOO":2,"BAR":"baz","TEST":"prefix-valueTest-suffix","DATE":"2020-01-01T00:00Z"}
+      { "FOO": 1, "BAR": "valueBar1", "TEST": "prefix-valueTest-suffix", "DATE": "2020-01-01T00:00Z" }
+      { "FOO": 2, "BAR": "baz", "TEST": "prefix-valueTest-suffix", "DATE": "2020-01-01T00:00Z" }
       """
+    * karate.log(jsonContent.trim())
     And match jsonContent.trim() == expected.trim()
 
   Scenario: time.offsetDateTimeNow

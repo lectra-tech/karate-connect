@@ -228,9 +228,9 @@ class KafkaClient(
         }
     }
 
-    fun createTopic(topic: String, partitions: Int = 1, replicationFactor: Short = 1) {
+    fun createTopic(topic: String, partitions: Int = 1, replicationFactor: Int = 1) {
         return logExecution("Creating topic '$topic' with $partitions partitions and replication factor $replicationFactor") {
-            val newTopic = NewTopic(topic, partitions, replicationFactor)
+            val newTopic = NewTopic(topic, partitions, replicationFactor.toShort())
             adminClient.createTopics(listOf(newTopic)).all().get()
         }
     }

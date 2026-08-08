@@ -18,13 +18,11 @@
  */
 package com.lectra.karate.connect
 
-import com.intuit.karate.Results
-import com.intuit.karate.Runner
 import com.lectra.karate.connect.kafka.LocalKafkaBroker
 import com.lectra.karate.connect.rabbitmq.LocalRabbitmqBroker
 import com.lectra.karate.connect.rabbitmq.Message
 import com.lectra.karate.connect.rabbitmq.SimpleServer
-import org.apache.kafka.clients.CommonClientConfigs
+import io.karatelabs.core.Runner
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -78,12 +76,6 @@ class AllFeaturesTest {
         }
     }
 
-//    @Karate.Test
-//    fun testAllSequential(): Karate {
-//        return Karate.run().systemProperty("extensions", "snowflake").relativeTo(javaClass)
-//    }
-
-
     @Test
     fun testAllParallel() {
         val props = mutableListOf<Pair<String, String>>()
@@ -108,14 +100,16 @@ class AllFeaturesTest {
             )
         }
         val builder = props.fold(
-            Runner.path("src/test/resources")
+            Runner
+                .path("src/test/resources")
                 .systemProperty("extensions", testExtensions.joinToString(",") { it.name })
+                .backupOutputDir(false)
         ) { b, (k, v) -> b.systemProperty(k, v) }
 
-        val results: Results = builder
+        val results = builder
             .tags(tags)
             .parallel(16)
 
-        assertEquals(0, results.failCount, results.errorMessages)
+        assertEquals(0, results.featureFailedCount, results.errors.joinToString("\n"))
     }
 }

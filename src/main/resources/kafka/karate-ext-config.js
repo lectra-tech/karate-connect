@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-function fn() {
+(function fn() {
     karate.log("Karate Ext Config Kafka");
     const KafkaClient = Java.type("com.lectra.karate.connect.kafka.KafkaClient");
 
@@ -47,9 +47,9 @@ function fn() {
         "KafkaClient": KafkaClient
     };
 
-    const generatedConfig = karate.read('classpath:kafka/kafka.js');
+    const generatedConfig = karate.read("classpath:kafka/kafka.js");
     return {
         ...defaultConfig,
         ...generatedConfig
     };
-}
+})();

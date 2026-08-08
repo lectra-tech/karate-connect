@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.3.20"
-karate = "1.5.2"
+karate = "2.0.6"
 amqp-client = "5.29.0"
 qpidbrokerj = "10.0.1"
 awaitility = "4.3.0"
@@ -9,10 +9,12 @@ grgit = "5.3.3"
 kafka-clients = "4.2.0"
 embedded-kafka-schema-registry = "8.2.0"
 confluent = "8.2.0"
+junit = "6.0.3"
+logback = "1.5.32"
 
 [libraries]
 karate-core = { module = "io.karatelabs:karate-core", version.ref = "karate" }
-karate-junit5 = { module = "io.karatelabs:karate-junit5", version.ref = "karate" }
+karate-junit6 = { module = "io.karatelabs:karate-junit6", version.ref = "karate" }
 amqp-client = { module = "com.rabbitmq:amqp-client", version.ref = "amqp-client" }
 qpid-broker-core = { module = "org.apache.qpid:qpid-broker-core", version.ref = "qpidbrokerj" }
 qpid-broker-plugins-amqp = { module = "org.apache.qpid:qpid-broker-plugins-amqp-0-8-protocol", version.ref = "qpidbrokerj" }
@@ -24,6 +26,9 @@ kafka-avro-serializer = { module = "io.confluent:kafka-avro-serializer", version
 kafka-json-schema-serializer = { module = "io.confluent:kafka-json-schema-serializer", version.ref = "confluent" }
 kafka-protobuf-serializer = { module = "io.confluent:kafka-protobuf-serializer", version.ref = "confluent" }
 embedded-kafka-schema-registry = { module = "io.github.embeddedkafka:embedded-kafka-schema-registry_3", version.ref = "embedded-kafka-schema-registry" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -29,5 +29,6 @@ Feature: cli
     * json result = { status : "WIP" }
     * string dbtCommand = "dbt run "+selectValue+" "+profilesDirValue+" "+projectDirValue+" "+extraValue
     * string execCommand = (karate.get("env") != null ? "bash -c '"+Object.keys(env).map((k) => k + "=" + env[k]).join(" ")+" "+dbtCommand+"'" : dbtCommand) 
-    * result.output = karate.exec(execCommand)
-    * result.status = (result.output.contains("Completed successfully") ? "OK" : "FAILED")
+    * string output = karate.exec(execCommand).trim()
+    * result.output = output
+    * result.status = (output.includes("Completed successfully") ? "OK" : "FAILED")

@@ -21,7 +21,9 @@ function fn() {
     const extensions = (karate.properties["extensions"] ? karate.properties["extensions"] : "").split(",");
     if (extensions.includes("snowflake")) { karate.callSingle("classpath:snowflake/init.feature@createPem") };
 
+
     return {
+        "counter": new java.util.concurrent.atomic.AtomicInteger(0),
         "projectName": "karate-connect-build-test",
         "architecture": java.lang.System.getProperty("os.arch").toUpperCase()
     };

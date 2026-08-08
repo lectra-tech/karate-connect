@@ -16,13 +16,13 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-function fn() {
+(function fn() {
     karate.log("Karate Ext Config DBT");
 
     const defaultConfig = { };
-    const generatedConfig = karate.read('classpath:dbt/dbt.js');
+    const generatedConfig = karate.read("classpath:dbt/dbt.js");
     return {
         ...defaultConfig,
         ...generatedConfig
     };
-}
+})();

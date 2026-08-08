@@ -56,26 +56,25 @@ Feature: rest
     And retry until responseStatus >= 200 && responseStatus < 300
     When method post
     * if (responseStatus == 202) { response = karate.call("@wait200", { statementHandle: response.statementHandle, snowflakeApiUrl: preparateRunSql.snowflakeApiUrl, headers: preparateRunSql.headers}).response }
-    * if (responseStatus >= 400) karate.fail(JSON.stringify(response))
+    * result.status = (responseStatus >= 400 ? "FAILED": "OK")
     * result.statementHandle = response.statementHandle
     * result.message = response.message
-    * result.status = "OK"
-    * def extractValue =
+    * def mapData =
     """
-    function(columnType, value) {
-      switch (columnType) {
-        case 'boolean':
-          return eval(value);
-        case 'real':
-          return eval(value);
-        case 'fixed':
-          return eval(value);
-        default:
-          return value;
-      }
+    function(response) {
+      return response.data.map(row =>
+        Object.fromEntries(
+          response.resultSetMetaData.rowType.map((col, i) => {
+            let value = row[i];
+            if (col.type === 'boolean') value = value === 'true';
+            else if (col.type === 'real' || col.type === 'fixed') value = Number(value);
+            return [col.name, value];
+          })
+        )
+      );
     }
     """
-    * result.data = karate.map(response.data, (row) => response.resultSetMetaData.rowType.reduce((out, column, index) => ((out[column.name] = extractValue(column.type, row[index])), out), {}))
+    * result.data = mapData(response)
 
   @cloneSchema
   Scenario: cloneSchema
@@ -99,8 +98,8 @@ Feature: rest
   @insertRowIntoStagingTable
   Scenario: insertRowIntoStagingTable
   args = { "table": "MY_TABLE", "recordMetadata": {...}, "recordMetadataFile": "...", "recordValue": {...}, "recordValueFile": "...", jwt: "...", cliConfig: { ... }, "snowflakeConfig": { ... } }
-    * json metadata = (karate.get("recordMetadata") != null ? recordMetadata : karate.read(recordMetadataFile))
-    * json value = (karate.get("recordValue") != null ? recordValue : karate.read(recordValueFile))
+    * json metadata = (karate.get("recordMetadata") != null ? recordMetadata : karate.read("file:"+recordMetadataFile))
+    * json value = (karate.get("recordValue") != null ? recordValue : karate.read("file:"+recordValueFile))
     * string recordToString = karate.call("@recordToString", { recordMetadata: metadata, recordValue: value }).result
     * json result = karate.call("@runSql", { statement: "INSERT INTO "+table+" SELECT PARSE_JSON(column1), PARSE_JSON(column2) FROM VALUES "+recordToString, jwt, cliConfig, snowflakeConfig }).result
 
