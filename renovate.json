@@ -29,13 +29,6 @@
         "org.apache.kafka:kafka-clients"
       ],
       "allowedVersions": "<5.0.0"
-    },
-    {
-      "description": "eclipse-temurin disabled",
-      "matchDepNames": [
-        "eclipse-temurin"
-      ],
-      "enabled": false
     }
   ]
 }
